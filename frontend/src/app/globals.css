@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  /* --- Authentic Zoom Brand Colors --- */
+  --color-zoom-blue: #2d8cff;
+  --color-zoom-blue-hover: #1a7ae6;
+  --color-zoom-orange: #f26d21;
+  --color-zoom-orange-hover: #e05c10;
+  --color-zoom-dark-canvas: #232333;
+  --color-zoom-dark-surface: #1e1e2d;
+  --color-zoom-card-surface: #2C2C3E;
+  --color-zoom-card-hover: #34344a;
+  --color-zoom-muted-text: #747487;
+  --color-zoom-subtle-text: #a1a1b3;
+  --color-zoom-white: #ffffff;
+  --color-zoom-stage-black: #000000;
+  --color-zoom-border: #36364A;
+  --color-zoom-border-light: #484860;
+  --color-zoom-success: #28a745;
+  --color-zoom-danger: #e02828;
+  --color-zoom-danger-hover: #c91e1e;
+  --color-zoom-warning: #f5a623;
+
+  /* --- Dynamic Theme-Adaptive Tokens --- */
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-surface-hover: var(--bg-surface-hover);
+  --color-surface-subtle: var(--bg-surface-subtle);
+  --color-app-border: var(--border-color);
+  --color-app-border-light: var(--border-light);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  /* --- Typography Stacks --- */
+  --font-sans: var(--font-lato), "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-wordmark: "Kaleko 205", var(--font-lato), "Segoe UI", sans-serif;
+}
+
+/* 🌞 Light Theme (Default) */
+:root {
+  --bg-canvas: #f6f7f9;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f0f2f5;
+  --bg-surface-subtle: #f8f9fa;
+  --border-color: #e2e4e8;
+  --border-light: #eceef2;
+  --text-primary: #181824;
+  --text-secondary: #5f6368;
+  --text-muted: #747487;
+
+  --background: var(--bg-canvas);
+  --foreground: var(--text-primary);
+}
+
+/* 🌙 Dark Theme */
+.dark {
+  --bg-canvas: #232333;
+  --bg-surface: #2C2C3E;
+  --bg-surface-hover: #34344a;
+  --bg-surface-subtle: #1e1e2d;
+  --border-color: #36364A;
+  --border-light: #484860;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1b3;
+  --text-muted: #747487;
+
+  --background: var(--bg-canvas);
+  --foreground: var(--text-primary);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Custom Scrollbar for Zoom Theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-surface-subtle);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
