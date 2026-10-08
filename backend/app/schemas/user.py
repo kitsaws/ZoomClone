@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 
 class UserBase(BaseModel):
-    email: EmailStr
+    email: str
     display_name: str
     avatar_url: Optional[str] = None
 
@@ -14,7 +14,7 @@ class UserCreate(UserBase):
 
 
 class UserSignInRequest(BaseModel):
-    email: EmailStr
+    email: str
 
 
 class UserSwitchRequest(BaseModel):
