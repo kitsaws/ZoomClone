@@ -29,16 +29,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         <button
           onClick={onClick}
           className={cn(
-            "w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center text-white transition-all duration-200 cursor-pointer shadow-lg active:scale-95",
+            "w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center text-white transition-colors duration-200 cursor-pointer shadow-lg active:scale-95",
             isOrange
               ? "bg-zoom-orange hover:bg-zoom-orange-hover shadow-[0_8px_20px_rgba(242,109,33,0.35)] hover:shadow-[0_12px_28px_rgba(242,109,33,0.45)]"
               : "bg-zoom-blue hover:bg-zoom-blue-hover shadow-[0_8px_20px_rgba(45,140,255,0.3)] hover:shadow-[0_12px_28px_rgba(45,140,255,0.4)]"
           )}
           aria-label={title}
         >
-          <div className="transform group-hover:scale-110 transition-transform duration-200">
-            {icon}
-          </div>
+          {icon}
         </button>
 
         {hasDropdown && (

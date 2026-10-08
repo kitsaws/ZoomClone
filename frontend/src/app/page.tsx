@@ -2,315 +2,222 @@
 
 import React, { useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { ActionCard } from "@/components/ui/ActionCard";
-import { Button } from "@/components/ui/Button";
-import { Avatar } from "@/components/ui/Avatar";
-import { Badge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
-import { Input } from "@/components/ui/Input";
-import {
-  Video,
-  Plus,
-  Calendar,
-  Share2,
-  Sparkles,
-  Link2,
-  Clock,
-  LogOut,
-  ExternalLink,
-} from "lucide-react";
-import Link from "next/link";
+import { useMeetings } from "@/hooks/useMeetings";
+import { SidebarNav } from "@/components/dashboard/SidebarNav";
+import { ClockWidget } from "@/components/dashboard/ClockWidget";
+import { ActionCards } from "@/components/dashboard/ActionCards";
+import { MeetingTabs } from "@/components/dashboard/MeetingTabs";
+import { ConnectingOverlay } from "@/components/modals/ConnectingOverlay";
+import { JoinMeetingModal } from "@/components/modals/JoinMeetingModal";
+import { ScheduleMeetingModal } from "@/components/modals/ScheduleMeetingModal";
+import { UserSwitcherModal } from "@/components/modals/UserSwitcherModal";
+import { MeetingCreatePayload } from "@/types/meeting";
 import { useRouter } from "next/navigation";
+import { Sparkles, Sun, Moon, Laptop } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const router = useRouter();
-  const { currentUser, logout, isLoading } = useCurrentUser();
+  const { currentUser, switchUser, logout } = useCurrentUser();
+  const {
+    upcomingMeetings,
+    activeMeetings,
+    recentMeetings,
+    createInstantMeeting,
+    scheduleMeeting,
+  } = useMeetings();
+
+  // Modals & Overlays state
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [meetingIdInput, setMeetingIdInput] = useState("");
-  const [guestNameInput, setGuestNameInput] = useState("");
+  const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingTitle, setConnectingTitle] = useState("Starting meeting...");
 
-  const handleInstantMeeting = () => {
-    const instantId = "84920183921";
-    router.push(`/meeting/${instantId}`);
+  // Theme State
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
+
+  const toggleTheme = (mode: "light" | "dark" | "system") => {
+    setTheme(mode);
+    const root = document.documentElement;
+    if (mode === "dark") {
+      root.classList.add("dark");
+    } else if (mode === "light") {
+      root.classList.remove("dark");
+    } else {
+      const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (isSystemDark) root.classList.add("dark");
+      else root.classList.remove("dark");
+    }
   };
 
-  const handleJoinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!meetingIdInput.trim()) return;
-    const cleaned = meetingIdInput.replace(/\D/g, "");
-    const query = guestNameInput ? `?name=${encodeURIComponent(guestNameInput)}` : "";
-    router.push(`/meeting/${cleaned}${query}`);
+  // Instant meeting handler with Zoom connecting animation
+  const handleInstantMeeting = async () => {
+    setConnectingTitle("Starting instant meeting...");
+    setIsConnecting(true);
+    try {
+      const meetingTopic = currentUser
+        ? `${currentUser.display_name}'s Personal Meeting Room`
+        : "Instant Meeting";
+      const newMeeting = await createInstantMeeting(meetingTopic);
+
+      // Short aesthetic delay to let the user see the Zoom pulse spinner
+      setTimeout(() => {
+        setIsConnecting(false);
+        router.push(`/meeting/${newMeeting.id}`);
+      }, 700);
+    } catch (e: any) {
+      setIsConnecting(false);
+      alert(e?.message || "Failed to launch instant meeting.");
+    }
+  };
+
+  const handleScheduleSubmit = async (payload: MeetingCreatePayload) => {
+    return await scheduleMeeting(payload);
   };
 
   return (
-    <main className="min-h-screen bg-canvas text-text-primary flex flex-col justify-between transition-colors duration-200">
-      {/* Top Navbar */}
-      <header className="border-b border-app-border px-6 py-4 flex items-center justify-between max-w-7xl mx-auto w-full">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="bg-zoom-blue text-white rounded-xl p-1.5 shadow-md">
-              <Video className="h-5 w-5" />
-            </div>
-            <span className="text-2xl font-black tracking-tight text-text-primary font-wordmark">
-              zoom<span className="text-zoom-blue text-xs align-super ml-1 font-sans font-bold">workplace</span>
-            </span>
-          </Link>
+    <div className="min-h-screen bg-canvas text-text-primary flex flex-row antialiased transition-colors duration-200">
+      {/* Left Vertical Sidebar Navigation */}
+      <SidebarNav
+        currentUser={currentUser}
+        onOpenUserSwitcher={() => setIsUserSwitcherOpen(true)}
+      />
 
-          <nav className="hidden md:flex items-center gap-1 text-xs font-semibold text-text-muted">
-            <span className="px-3 py-1.5 rounded-lg bg-surface text-text-primary border border-app-border shadow-sm">
-              Home
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col justify-between overflow-y-auto max-h-screen">
+        {/* Top Navbar */}
+        <header className="border-b border-app-border px-6 py-4 flex items-center justify-between bg-surface/80 backdrop-blur-md sticky top-0 z-20">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold tracking-tight text-text-primary">
+              Zoom Workplace Dashboard
             </span>
-            <Link
-              href="/components"
-              className="px-3 py-1.5 rounded-lg hover:text-text-primary hover:bg-surface transition-colors flex items-center gap-1"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-zoom-blue" />
-              <span>Components Gallery</span>
-            </Link>
-          </nav>
-        </div>
+          </div>
 
-        {/* User Account / Sign In Pill */}
-        <div className="flex items-center gap-3">
-          {isLoading ? (
-            <div className="h-9 w-24 bg-surface animate-pulse rounded-xl" />
-          ) : currentUser ? (
-            <div className="flex items-center gap-2 bg-surface border border-app-border px-3 py-1.5 rounded-xl shadow-sm">
-              <Avatar name={currentUser.display_name} size="sm" status="online" />
-              <div className="text-left hidden sm:block">
-                <p className="text-xs font-semibold text-text-primary leading-tight">
-                  {currentUser.display_name}
-                </p>
-                <p className="text-[10px] text-text-muted">{currentUser.email}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            {/* Theme Toggle Pill */}
+            <div className="bg-surface-subtle border border-app-border rounded-xl p-1 flex items-center shadow-inner">
               <button
-                onClick={logout}
-                className="ml-2 text-text-muted hover:text-zoom-danger transition-colors p-1 cursor-pointer"
-                title="Sign Out"
+                onClick={() => toggleTheme("light")}
+                className={cn(
+                  "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                  theme === "light" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
+                )}
+                title="Light Mode"
               >
-                <LogOut className="h-4 w-4" />
+                <Sun className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => toggleTheme("dark")}
+                className={cn(
+                  "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                  theme === "dark" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
+                )}
+                title="Dark Mode"
+              >
+                <Moon className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => toggleTheme("system")}
+                className={cn(
+                  "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                  theme === "system" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
+                )}
+                title="System Mode"
+              >
+                <Laptop className="h-3.5 w-3.5" />
               </button>
             </div>
-          ) : (
-            <Link href="/signin">
-              <Button variant="primary" size="sm">
-                Sign In
-              </Button>
+
+            {/* Component Gallery Link */}
+            <Link
+              href="/components"
+              className="text-xs font-semibold bg-surface border border-app-border px-3 py-1.5 rounded-xl hover:text-zoom-blue transition-colors flex items-center gap-1.5 shadow-sm"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-zoom-blue" />
+              <span className="hidden sm:inline">UI Gallery</span>
             </Link>
-          )}
-        </div>
-      </header>
-
-      {/* Hero Showcase Notification Banner */}
-      <div className="max-w-5xl mx-auto w-full px-6 pt-6">
-        <div className="bg-gradient-to-r from-zoom-blue/15 via-purple-600/10 to-zoom-orange/15 border border-zoom-blue/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-3 text-center sm:text-left">
-            <div className="bg-zoom-blue text-white rounded-xl p-2 shrink-0 shadow-sm">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-text-primary">
-                UI Components Showcase Available (Light &amp; Dark Theme)
-              </h3>
-              <p className="text-xs text-text-secondary">
-                Review all Zoom primitives, authentic brand color tokens (#2d8cff, #f26d21, #232333, #747487, #ffffff), typography, and live theme toggling on a single page.
-              </p>
-            </div>
           </div>
-          <Link href="/components" className="shrink-0 w-full sm:w-auto">
-            <Button variant="primary" size="sm" rightIcon={<ExternalLink className="h-3.5 w-3.5" />}>
-              Open /components
-            </Button>
-          </Link>
-        </div>
-      </div>
+        </header>
 
-      {/* Main Dashboard Grid */}
-      <div className="max-w-5xl mx-auto w-full px-6 py-10 space-y-12">
-        {/* 4 Hero Action Tiles */}
-        <div className="bg-surface border border-app-border rounded-3xl p-8 sm:p-12 shadow-sm">
-          <div className="flex items-center justify-around flex-wrap gap-8">
-            <ActionCard
-              title="New Meeting"
-              variant="orange"
-              hasDropdown={true}
-              icon={<Video className="h-10 w-10 sm:h-12 sm:w-12" />}
-              onClick={handleInstantMeeting}
-            />
-            <ActionCard
-              title="Join"
-              variant="blue"
-              icon={<Plus className="h-10 w-10 sm:h-12 sm:w-12" />}
-              onClick={() => setIsJoinModalOpen(true)}
-            />
-            <ActionCard
-              title="Schedule"
-              variant="blue"
-              icon={<Calendar className="h-10 w-10 sm:h-12 sm:w-12" />}
-              onClick={() => setIsScheduleModalOpen(true)}
-            />
-            <ActionCard
-              title="Share Screen"
-              variant="blue"
-              icon={<Share2 className="h-10 w-10 sm:h-12 sm:w-12" />}
-              onClick={() => setIsJoinModalOpen(true)}
-            />
+        {/* Dashboard Center Container */}
+        <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-8 flex-1">
+          {/* Real-time Clock Widget & User Greeting */}
+          <ClockWidget userName={currentUser?.display_name} />
+
+          {/* 4 Hero Action Tiles (Official SVGs) */}
+          <ActionCards
+            onNewMeeting={handleInstantMeeting}
+            onJoin={() => setIsJoinModalOpen(true)}
+            onSchedule={() => setIsScheduleModalOpen(true)}
+            onShareScreen={() => setIsJoinModalOpen(true)}
+          />
+
+          {/* Tabbed Meetings Feeds (Upcoming, Live Rooms, Past History) */}
+          <MeetingTabs
+            upcomingMeetings={upcomingMeetings}
+            activeMeetings={activeMeetings}
+            recentMeetings={recentMeetings}
+            currentUserId={currentUser?.id}
+            onOpenSchedule={() => setIsScheduleModalOpen(true)}
+            onOpenNewMeeting={handleInstantMeeting}
+          />
+        </div>
+
+        {/* Bottom Footer */}
+        <footer className="border-t border-app-border py-4 px-6 text-center text-xs text-text-muted max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>© 2026 Zoom Workplace Clone. Built with Next.js &amp; FastAPI.</span>
+          <div className="flex items-center gap-4 text-[11px]">
+            <Link href="/components" className="hover:text-text-primary underline">
+              Component Showcase
+            </Link>
+            <Link href="/signin" className="hover:text-text-primary underline">
+              Persona Sign In
+            </Link>
+            <a
+              href="http://localhost:8000/docs"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-text-primary underline"
+            >
+              Swagger REST Docs
+            </a>
           </div>
-        </div>
+        </footer>
+      </main>
 
-        {/* Scheduled Meetings Feed */}
-        <div className="bg-surface border border-app-border rounded-2xl p-6 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-zoom-blue" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-text-primary">
-                Upcoming &amp; Active Meetings
-              </h2>
-            </div>
-            <Badge variant="active" dot={true}>
-              1 Active Room
-            </Badge>
-          </div>
+      {/* MODALS */}
+      {/* 1. Zoom Loading Spinner Overlay */}
+      <ConnectingOverlay
+        isOpen={isConnecting}
+        title={connectingTitle}
+        subtitle="Connecting you to your secure room..."
+      />
 
-          <div className="divide-y divide-app-border">
-            {/* Active Seeded Meeting */}
-            <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-text-primary">
-                    Scaler Fullstack Architecture Sync
-                  </h4>
-                  <Badge variant="host" size="sm">
-                    In Progress
-                  </Badge>
-                </div>
-                <p className="text-xs text-text-secondary">
-                  Meeting ID: <strong className="text-text-primary">849 2018 3921</strong> • Host: Swastik Nagpal • 3 Participants in room
-                </p>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => router.push("/meeting/84920183921")}
-              >
-                Join Live Call
-              </Button>
-            </div>
-
-            {/* Upcoming Sync */}
-            <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <h4 className="text-sm font-semibold text-text-primary">
-                  Sprint Planning &amp; AI Feature Roadmap
-                </h4>
-                <p className="text-xs text-text-secondary">
-                  Meeting ID: 912 4430 1822 • Starts Today at 3:00 PM • Host: Alex Chen
-                </p>
-              </div>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsScheduleModalOpen(true)}
-              >
-                View Details
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Footer */}
-      <footer className="border-t border-app-border py-4 px-6 text-center text-xs text-text-muted max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2">
-        <span>© 2026 Zoom Clone. Built with Next.js &amp; FastAPI.</span>
-        <div className="flex items-center gap-4 text-[11px]">
-          <Link href="/components" className="hover:text-text-primary underline">
-            UI Showcase Gallery
-          </Link>
-          <Link href="/signin" className="hover:text-text-primary underline">
-            Sign In / Personas
-          </Link>
-          <a
-            href="http://localhost:8000/docs"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-text-primary underline"
-          >
-            Backend Swagger Docs
-          </a>
-        </div>
-      </footer>
-
-      {/* Join Meeting Modal */}
-      <Modal
+      {/* 2. Official Screenshot-Aligned Join Meeting Modal */}
+      <JoinMeetingModal
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
-        title="Join a Meeting"
-        description="Enter the meeting ID or personal link to join."
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsJoinModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleJoinSubmit}>
-              Join Room
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleJoinSubmit} className="space-y-4">
-          <Input
-            label="Meeting ID or Personal Link Name"
-            placeholder="e.g. 849 2018 3921"
-            value={meetingIdInput}
-            onChange={(e) => setMeetingIdInput(e.target.value)}
-            leftIcon={<Link2 className="h-4 w-4" />}
-            required
-            autoFocus
-          />
-          {!currentUser && (
-            <Input
-              label="Your Display Name"
-              placeholder="e.g. Guest User"
-              value={guestNameInput}
-              onChange={(e) => setGuestNameInput(e.target.value)}
-              required
-            />
-          )}
-        </form>
-      </Modal>
+        defaultName={currentUser?.display_name || ""}
+      />
 
-      {/* Schedule Meeting Modal */}
-      <Modal
+      {/* 3. Schedule Meeting Modal */}
+      <ScheduleMeetingModal
         isOpen={isScheduleModalOpen}
         onClose={() => setIsScheduleModalOpen(false)}
-        title="Schedule a Meeting"
-        description="Configure your meeting parameters."
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsScheduleModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setIsScheduleModalOpen(false);
-                alert("Meeting scheduled!");
-              }}
-            >
-              Schedule
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Input label="Topic" defaultValue="Weekly Architecture Sync" />
-          <Input label="Start Time" type="datetime-local" />
-          <Input label="Duration (Minutes)" type="number" defaultValue="30" />
-        </div>
-      </Modal>
-    </main>
+        onSchedule={handleScheduleSubmit}
+        defaultTopic={currentUser ? `${currentUser.display_name}'s Sync` : "Team Sync"}
+      />
+
+      {/* 4. Multi-Persona Fast Switcher Modal */}
+      <UserSwitcherModal
+        isOpen={isUserSwitcherOpen}
+        onClose={() => setIsUserSwitcherOpen(false)}
+        currentUser={currentUser}
+        onSelectUser={switchUser}
+        onSignOut={logout}
+      />
+    </div>
   );
 }

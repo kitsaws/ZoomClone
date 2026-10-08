@@ -23,6 +23,7 @@ import {
   Moon,
   Laptop,
 } from "lucide-react";
+import { HostIcon, JoinIcon, ScheduleIcon, ShareIcon } from "@/components/icons/ZoomIcons";
 import { cn } from "@/lib/utils";
 
 type ThemeMode = "light" | "dark" | "system";
@@ -240,25 +241,25 @@ export function ComponentGallery() {
             title="New Meeting"
             variant="orange"
             hasDropdown={true}
-            icon={<Video className="h-9 w-9" />}
+            icon={<HostIcon className="h-9 w-9" />}
             onClick={() => alert("New Meeting Clicked")}
           />
           <ActionCard
             title="Join"
             variant="blue"
-            icon={<Plus className="h-9 w-9" />}
+            icon={<JoinIcon className="h-9 w-9" />}
             onClick={() => setIsJoinModalOpen(true)}
           />
           <ActionCard
             title="Schedule"
             variant="blue"
-            icon={<Calendar className="h-9 w-9" />}
+            icon={<ScheduleIcon className="h-9 w-9" />}
             onClick={() => setIsScheduleModalOpen(true)}
           />
           <ActionCard
             title="Share Screen"
             variant="blue"
-            icon={<Share2 className="h-9 w-9" />}
+            icon={<ShareIcon className="h-9 w-9" />}
             onClick={() => alert("Share Screen Clicked")}
           />
         </div>
