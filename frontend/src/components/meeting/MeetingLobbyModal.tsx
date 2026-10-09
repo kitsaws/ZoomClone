@@ -36,9 +36,17 @@ export const MeetingLobbyModal: React.FC<MeetingLobbyModalProps> = ({
   const [displayName, setDisplayName] = useState(
     initialName ||
       (typeof window !== "undefined"
-        ? localStorage.getItem("zoom_saved_name") || ""
+        ? (isHost
+            ? localStorage.getItem("zoom_saved_name")
+            : localStorage.getItem("zoom_guest_name")) || ""
         : "")
   );
+
+  useEffect(() => {
+    if (initialName && !displayName) {
+      setDisplayName(initialName);
+    }
+  }, [initialName]);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [alwaysShowPreview, setAlwaysShowPreview] = useState(true);
@@ -112,7 +120,7 @@ export const MeetingLobbyModal: React.FC<MeetingLobbyModalProps> = ({
     e.preventDefault();
     const finalName = displayName.trim() || (isHost ? "Host" : "Guest User");
     if (typeof window !== "undefined") {
-      localStorage.setItem("zoom_saved_name", finalName);
+      localStorage.setItem(isHost ? "zoom_saved_name" : "zoom_guest_name", finalName);
     }
     // Stop preview stream before room takes over
     if (streamRef.current) {

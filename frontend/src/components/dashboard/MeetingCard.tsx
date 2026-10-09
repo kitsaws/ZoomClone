@@ -111,7 +111,14 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
 
   const handleStartJoin = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/meeting/${meeting.id}`);
+    if (isHost) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`zoom_host_${meeting.id}`, "true");
+      }
+      router.push(`/meeting/${meeting.id}?host=1`);
+    } else {
+      router.push(`/meeting/${meeting.id}`);
+    }
   };
 
   const handleChatClick = (e: React.MouseEvent) => {

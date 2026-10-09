@@ -253,16 +253,15 @@ function MeetingRoomContainer({ params }: MeetingRoomProps) {
   const urlName = searchParams.get("name") || "";
   const urlAudioMuted = searchParams.get("audio") === "0";
   const urlVideoOff = searchParams.get("video") === "0";
-  const passcode = searchParams.get("passcode") || undefined;
+  const passcode = searchParams.get("passcode") || searchParams.get("pwd") || undefined;
   const skipLobby = searchParams.get("autojoin") === "1";
+  const hostParam = searchParams.get("host") === "1";
 
-  // Pre-join Lobby state
-  const [hasJoinedLobby, setHasJoinedLobby] = useState(skipLobby);
-  const [lobbyOptions, setLobbyOptions] = useState({
-    displayName: urlName || currentUser?.display_name || "",
-    audioMuted: urlAudioMuted,
-    videoOff: urlVideoOff,
-  });
+  // Check if this browser session was flagged as the host
+  const isHostSession =
+    hostParam ||
+    (typeof window !== "undefined" &&
+      sessionStorage.getItem(`zoom_host_${meetingId}`) === "true");
 
   const [meetingMeta, setMeetingMeta] = useState<Meeting | null>(null);
 
@@ -274,19 +273,41 @@ function MeetingRoomContainer({ params }: MeetingRoomProps) {
       .catch(console.warn);
   }, [meetingId]);
 
-  if (!hasJoinedLobby) {
-    const isHostUser = Boolean(
+  // Is this user the actual host?
+  // Only true if this tab has the hostSession flag AND matches host_id
+  const isHostUser = Boolean(
+    isHostSession &&
       currentUser?.id &&
-        meetingMeta?.host_id &&
-        currentUser.id === meetingMeta.host_id
-    );
+      meetingMeta?.host_id &&
+      currentUser.id === meetingMeta.host_id
+  );
 
+  // Link attendees get guest name prefill or blank so they enter their own name
+  const defaultDisplayName = isHostUser
+    ? currentUser?.display_name || "Host"
+    : urlName ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("zoom_guest_name") || ""
+        : "");
+
+  // Pre-join Lobby state
+  const [hasJoinedLobby, setHasJoinedLobby] = useState(skipLobby);
+  const [lobbyOptions, setLobbyOptions] = useState({
+    displayName: defaultDisplayName,
+    audioMuted: urlAudioMuted,
+    videoOff: urlVideoOff,
+  });
+
+  if (!hasJoinedLobby) {
     return (
       <MeetingLobbyModal
         meetingTitle={meetingMeta?.title || meetingMeta?.topic || "Zoom Meeting"}
-        initialName={urlName || currentUser?.display_name || ""}
+        initialName={defaultDisplayName}
         isHost={isHostUser}
         onJoin={(options) => {
+          if (!isHostUser && typeof window !== "undefined" && options.displayName) {
+            localStorage.setItem("zoom_guest_name", options.displayName);
+          }
           setLobbyOptions(options);
           setHasJoinedLobby(true);
         }}
@@ -298,7 +319,7 @@ function MeetingRoomContainer({ params }: MeetingRoomProps) {
   return (
     <MeetingRoomContent
       meetingId={meetingId}
-      currentUser={currentUser}
+      currentUser={isHostUser ? currentUser : null}
       initialName={lobbyOptions.displayName}
       initialAudioMuted={lobbyOptions.audioMuted}
       initialVideoOff={lobbyOptions.videoOff}

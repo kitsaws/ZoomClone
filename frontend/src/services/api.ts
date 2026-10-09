@@ -48,7 +48,8 @@ async function request<T>(
   };
 
   // Inject active persona from localStorage if available in browser
-  if (typeof window !== "undefined") {
+  // Only inject if X-User-Id was not explicitly provided or explicitly cleared
+  if (typeof window !== "undefined" && headers["X-User-Id"] === undefined) {
     try {
       const storedUser = localStorage.getItem("zoom_current_user");
       if (storedUser) {
@@ -60,6 +61,9 @@ async function request<T>(
     } catch {
       // Ignore localStorage parse errors
     }
+  } else if (headers["X-User-Id"] === "") {
+    // Explicitly asked not to send X-User-Id (guest / anonymous join)
+    delete headers["X-User-Id"];
   }
 
   const url = `${API_BASE_URL}${endpoint}`;
@@ -183,6 +187,9 @@ export const api = {
   ) =>
     request<LiveKitTokenResponse>(`/meetings/${idOrNumber}/token`, {
       method: "POST",
+      headers: {
+        "X-User-Id": payload.user_id && !payload.user_id.startsWith("guest_") ? payload.user_id : "",
+      },
       body: JSON.stringify(payload),
     }),
 
@@ -201,8 +208,12 @@ export const api = {
   ) =>
     request<MeetingParticipant>(`/meetings/${meetingId}/participants/join`, {
       method: "POST",
+      headers: {
+        "X-User-Id": data.user_id && !data.user_id.startsWith("guest_") ? data.user_id : "",
+      },
       body: JSON.stringify(data),
     }),
+
 
   leaveMeeting: (meetingId: string, participantId: string) =>
     request<MeetingParticipant>(

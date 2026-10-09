@@ -74,10 +74,19 @@ export const DayPlannerView: React.FC<DayPlannerViewProps> = ({
 
                   const timeRangeStr = `${formatMeetingTime(startD.toISOString())} - ${formatMeetingTime(endD.toISOString())}`;
 
+                  const handleItemClick = () => {
+                    if (isHost && typeof window !== "undefined") {
+                      sessionStorage.setItem(`zoom_host_${meeting.id}`, "true");
+                      router.push(`/meeting/${meeting.id}?host=1`);
+                    } else {
+                      router.push(`/meeting/${meeting.id}`);
+                    }
+                  };
+
                   return (
                     <div
                       key={meeting.id}
-                      onClick={() => router.push(`/meeting/${meeting.id}`)}
+                      onClick={handleItemClick}
                       className="group relative flex items-center justify-between bg-[#D9EAFE] dark:bg-[#1E3A8A]/40 hover:bg-[#C9E0FE] dark:hover:bg-[#1E3A8A]/60 border border-[#BFDBFE] dark:border-[#1E40AF]/60 rounded-xl px-3 py-2 text-xs text-[#1E40AF] dark:text-[#93C5FD] transition-all cursor-pointer shadow-sm"
                     >
                       {/* Left: Blue Accent bar + Film camera + Topic + Time */}
@@ -122,7 +131,7 @@ export const DayPlannerView: React.FC<DayPlannerViewProps> = ({
                         {/* Start / Join */}
                         <button
                           type="button"
-                          onClick={() => router.push(`/meeting/${meeting.id}`)}
+                          onClick={handleItemClick}
                           className="px-2 py-0.5 rounded-lg bg-[#2563EB] text-white font-semibold text-[11px] hover:bg-[#1D4ED8] transition-colors cursor-pointer shadow-sm"
                         >
                           {isHost ? "Start" : "Join"}

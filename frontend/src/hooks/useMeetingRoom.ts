@@ -153,9 +153,11 @@ export function useMeetingRoom({
       configRef.current.initialName ||
       user?.display_name ||
       (typeof window !== "undefined"
-        ? localStorage.getItem("zoom_saved_name")
+        ? (isLocalHost
+            ? localStorage.getItem("zoom_saved_name")
+            : localStorage.getItem("zoom_guest_name"))
         : null) ||
-      (user?.id ? "Host" : "You");
+      (isLocalHost ? "Host" : "You");
 
     const localPartObj: MeetingParticipant = {
       id: localPartId,
@@ -163,7 +165,7 @@ export function useMeetingRoom({
       user_id: user?.id || null,
       display_name: localDisplayName,
       role: isLocalHost ? "host" : "participant",
-      is_guest: !user?.id,
+      is_guest: !isLocalHost,
       audio_muted: isLocalMicMuted,
       video_muted: isLocalCamMuted,
       hand_raised: isHandRaisedRef.current,
@@ -224,7 +226,11 @@ export function useMeetingRoom({
         const displayName =
           name ||
           user?.display_name ||
-          (typeof window !== "undefined" ? localStorage.getItem("zoom_saved_name") : null) ||
+          (typeof window !== "undefined"
+            ? (user?.id
+                ? localStorage.getItem("zoom_saved_name")
+                : localStorage.getItem("zoom_guest_name"))
+            : null) ||
           (user?.id ? "Host" : "Guest User");
 
         // Persistent guest session ID to avoid identity collisions

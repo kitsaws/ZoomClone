@@ -180,12 +180,24 @@ def get_livekit_token(
     if meeting.passcode and payload.passcode and meeting.passcode != payload.passcode:
         raise HTTPException(status_code=400, detail="Invalid meeting passcode")
 
-    user_id = payload.user_id or x_user_id
-    is_host = bool(user_id and meeting.host_id and user_id == meeting.host_id)
+    user_id = payload.user_id if payload.user_id else x_user_id
     
-    # Generate stable identity
-    clean_name = payload.display_name.strip().replace(" ", "_").lower()
-    participant_identity = user_id or f"guest_{uuid.uuid4().hex[:8]}_{clean_name}"
+    # Check if this is the actual host of the meeting
+    is_host = bool(
+        user_id and 
+        meeting.host_id and 
+        user_id == meeting.host_id and 
+        not str(user_id).startswith("guest_")
+    )
+
+    # Generate stable, unique identity for LiveKit SFU
+    clean_name = payload.display_name.strip().replace(" ", "_").lower() if payload.display_name else "guest"
+    if is_host and user_id:
+        participant_identity = user_id
+    elif user_id and str(user_id).startswith("guest_"):
+        participant_identity = f"{user_id}_{clean_name}"
+    else:
+        participant_identity = f"guest_{uuid.uuid4().hex[:8]}_{clean_name}"
 
     token = LiveKitService.generate_meeting_token(
         meeting=meeting,
@@ -202,3 +214,4 @@ def get_livekit_token(
         participant_name=payload.display_name,
         is_host=is_host,
     )
+

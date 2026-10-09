@@ -47,10 +47,14 @@ export default function HomePage() {
         : "Instant Meeting";
       const newMeeting = await createInstantMeeting(meetingTopic);
 
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`zoom_host_${newMeeting.id}`, "true");
+      }
+
       // Short delay for the authentic Zoom pulse connection effect
       setTimeout(() => {
         setIsConnecting(false);
-        router.push(`/meeting/${newMeeting.id}`);
+        router.push(`/meeting/${newMeeting.id}?host=1`);
       }, 600);
     } catch (e: any) {
       setIsConnecting(false);
@@ -60,6 +64,9 @@ export default function HomePage() {
 
   const handleScheduleSubmit = async (payload: MeetingCreatePayload) => {
     const meeting = await scheduleMeeting(payload);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(`zoom_host_${meeting.id}`, "true");
+    }
     setIsScheduleModalOpen(false);
     setScheduledMeetingForInvite(meeting);
     return meeting;

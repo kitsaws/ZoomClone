@@ -45,7 +45,7 @@ class ParticipantService:
         display_name = payload.display_name.strip()
         role = ParticipantRole.PARTICIPANT
 
-        if user_id:
+        if user_id and not str(user_id).startswith("guest_"):
             user = user_repo.get_by_id(db, user_id)
             if user:
                 is_guest = False
@@ -61,14 +61,7 @@ class ParticipantService:
                         "is_audio_muted": payload.is_audio_muted,
                         "is_video_off": payload.is_video_off,
                     }) or existing
-        else:
-            # Check if active guest with same name already joined
-            existing_guest = participant_repo.get_active_by_display_name(db, meeting.id, display_name)
-            if existing_guest:
-                return participant_repo.update_state(db, existing_guest.id, {
-                    "is_audio_muted": payload.is_audio_muted,
-                    "is_video_off": payload.is_video_off,
-                }) or existing_guest
+
 
 
         # Create new participant
