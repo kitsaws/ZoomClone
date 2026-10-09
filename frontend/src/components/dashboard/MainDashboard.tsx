@@ -43,7 +43,7 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
       )}
     >
       {/* Top Right AI Sparkle Assistant Button (from Desktop Screenshot) */}
-      <div className="absolute top-4 right-4 sm:top-5 sm:right-6 z-10">
+      {/* <div className="absolute top-4 right-4 sm:top-5 sm:right-6 z-10">
         <button
           type="button"
           onClick={() => alert("Zoom Workplace AI Companion")}
@@ -52,7 +52,7 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
         >
           <Sparkles className="h-5 w-5 text-text-muted group-hover:text-zoom-blue transition-colors" />
         </button>
-      </div>
+      </div> */}
 
       {/* Centered Dashboard Content: Dashboard container does NOT scroll; only MeetingTabs scrolls */}
       <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col items-center space-y-4 sm:space-y-5 py-1">

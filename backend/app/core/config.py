@@ -16,9 +16,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./zoom_clone.db"
     
     # LiveKit SFU Configuration
-    LIVEKIT_URL: str = "wss://zoom-clone-demo.livekit.cloud"
-    LIVEKIT_API_KEY: str = "devkey"
-    LIVEKIT_API_SECRET: str = "secret"
+    LIVEKIT_URL: str = "wss://zoom-clone-439p850o.livekit.cloud"
+    LIVEKIT_API_KEY: str = "APIS7q9saEU2GVH"
+    LIVEKIT_API_SECRET: str = "b2HqHeW9HvEuDviPsxTRVk9SneexwekYAyWe2CKSMNzF"
     
     # CORS Origins
     CORS_ORIGINS: Union[List[str], str] = [
@@ -26,6 +26,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "https://zoomclone-vrmo.onrender.com",
+        "https://zoom-clone-mocha-six.vercel.app",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")
@@ -35,9 +36,20 @@ class Settings(BaseSettings):
             if v == "*":
                 return ["*"]
             if not v.startswith("["):
-                return [i.strip() for i in v.split(",") if i.strip()]
+                origins = []
+                for item in v.split(","):
+                    cleaned = item.strip()
+                    if cleaned:
+                        origins.append(cleaned)
+                        origins.append(cleaned.rstrip("/"))
+                return list(set(origins))
         elif isinstance(v, list):
-            return v
+            origins = []
+            for item in v:
+                if isinstance(item, str):
+                    origins.append(item.strip())
+                    origins.append(item.strip().rstrip("/"))
+            return list(set(origins))
         return ["*"]
 
     model_config = SettingsConfigDict(

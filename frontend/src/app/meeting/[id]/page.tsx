@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, Suspense } from "react";
+import React, { use, useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useMeetingRoom } from "@/hooks/useMeetingRoom";
@@ -12,26 +12,34 @@ import { ChatDrawer } from "@/components/meeting/ChatDrawer";
 import { HostToolsDrawer } from "@/components/meeting/HostToolsDrawer";
 import { LeaveMeetingModal } from "@/components/meeting/LeaveMeetingModal";
 import { MeetingEndedModal } from "@/components/meeting/MeetingEndedModal";
+import { MeetingLobbyModal } from "@/components/meeting/MeetingLobbyModal";
 import { Button } from "@/components/ui/Button";
 import { Sparkles, X, ArrowLeft } from "lucide-react";
+import { api } from "@/services/api";
+import { Meeting } from "@/types/meeting";
 
 interface MeetingRoomProps {
   params: Promise<{ id: string }>;
 }
 
-function MeetingRoomContent({ params }: MeetingRoomProps) {
+interface ActiveRoomProps {
+  meetingId: string;
+  initialName?: string;
+  initialAudioMuted: boolean;
+  initialVideoOff: boolean;
+  passcode?: string;
+}
+
+function MeetingRoomContent({
+  meetingId,
+  initialName,
+  initialAudioMuted,
+  initialVideoOff,
+  passcode,
+}: ActiveRoomProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { id: meetingId } = use(params);
   const { currentUser } = useCurrentUser();
 
-  // Query parameter overrides
-  const initialName = searchParams.get("name") || undefined;
-  const initialAudioMuted = searchParams.get("audio") === "0";
-  const initialVideoOff = searchParams.get("video") === "0";
-  const passcode = searchParams.get("passcode") || undefined;
-
-  // Single-source state machine
   const {
     meeting,
     participants,
@@ -39,39 +47,31 @@ function MeetingRoomContent({ params }: MeetingRoomProps) {
     isLoading,
     error,
     isHost,
-    // LiveKit tracks & speaking state
     localVideoTrack,
     remoteVideoTracks,
     speakingParticipantIds,
-    // Meeting Ended by Host Modal
     isMeetingEndedByHost,
-    // Reactions & Screen Sharing
     activeReactions,
     sendReaction,
     isScreenSharing,
     toggleScreenShare,
-    // Media Controls
     isMuted,
     isVideoOff,
     isHandRaised,
     toggleMic,
     toggleVideo,
     toggleHand,
-    // View Switcher
     viewMode,
     setViewMode,
-    // Drawers & Modals
     activeDrawer,
     setActiveDrawer,
     isInfoPopoverOpen,
     setIsInfoPopoverOpen,
     isLeaveModalOpen,
     setIsLeaveModalOpen,
-    // Time & Chat
     elapsedSeconds,
     chatMessages,
     sendMessage,
-    // Host Controls
     muteAll,
     leaveMeeting,
     endMeetingForAll,
@@ -137,7 +137,7 @@ function MeetingRoomContent({ params }: MeetingRoomProps) {
   const remoteParticipants = participants.filter((p) => p.id !== localParticipant?.id);
 
   return (
-    <div className="h-screen w-screen bg-black text-white flex flex-col overflow-hidden select-none">
+    <div className="h-screen w-screen bg-black text-white flex flex-col overflow-hidden select-none font-sans">
       {/* Top Header Bar */}
       <MeetingHeader
         meeting={meeting}
@@ -242,6 +242,69 @@ function MeetingRoomContent({ params }: MeetingRoomProps) {
   );
 }
 
+function MeetingRoomContainer({ params }: MeetingRoomProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { id: meetingId } = use(params);
+  const { currentUser } = useCurrentUser();
+
+  // Query parameter overrides
+  const urlName = searchParams.get("name") || "";
+  const urlAudioMuted = searchParams.get("audio") === "0";
+  const urlVideoOff = searchParams.get("video") === "0";
+  const passcode = searchParams.get("passcode") || undefined;
+  const skipLobby = searchParams.get("autojoin") === "1";
+
+  // Pre-join Lobby state
+  const [hasJoinedLobby, setHasJoinedLobby] = useState(skipLobby);
+  const [lobbyOptions, setLobbyOptions] = useState({
+    displayName: urlName || currentUser?.display_name || "",
+    audioMuted: urlAudioMuted,
+    videoOff: urlVideoOff,
+  });
+
+  const [meetingMeta, setMeetingMeta] = useState<Meeting | null>(null);
+
+  useEffect(() => {
+    if (!meetingId) return;
+    api
+      .getMeeting(meetingId)
+      .then((m) => setMeetingMeta(m))
+      .catch(console.warn);
+  }, [meetingId]);
+
+  if (!hasJoinedLobby) {
+    const isHostUser = Boolean(
+      currentUser?.id &&
+        meetingMeta?.host_id &&
+        currentUser.id === meetingMeta.host_id
+    );
+
+    return (
+      <MeetingLobbyModal
+        meetingTitle={meetingMeta?.title || meetingMeta?.topic || "Zoom Meeting"}
+        initialName={urlName || currentUser?.display_name || ""}
+        isHost={isHostUser}
+        onJoin={(options) => {
+          setLobbyOptions(options);
+          setHasJoinedLobby(true);
+        }}
+        onCancel={() => router.push("/")}
+      />
+    );
+  }
+
+  return (
+    <MeetingRoomContent
+      meetingId={meetingId}
+      initialName={lobbyOptions.displayName}
+      initialAudioMuted={lobbyOptions.audioMuted}
+      initialVideoOff={lobbyOptions.videoOff}
+      passcode={passcode}
+    />
+  );
+}
+
 export default function MeetingRoomPage(props: MeetingRoomProps) {
   return (
     <Suspense
@@ -256,7 +319,7 @@ export default function MeetingRoomPage(props: MeetingRoomProps) {
         </div>
       }
     >
-      <MeetingRoomContent {...props} />
+      <MeetingRoomContainer {...props} />
     </Suspense>
   );
 }
