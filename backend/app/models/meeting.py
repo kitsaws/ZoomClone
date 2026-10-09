@@ -1,7 +1,7 @@
 from datetime import datetime
 import enum
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, Text, Integer, DateTime, Enum, ForeignKey
+from sqlalchemy import String, Text, Integer, DateTime, Enum, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import TimeStampedModel
 
@@ -34,6 +34,19 @@ class Meeting(TimeStampedModel):
     start_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     duration_minutes: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
     invite_link: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    # Advanced schedule and security parameters
+    timezone: Mapped[str] = mapped_column(String(100), default="India (GMT+5:30)", nullable=False)
+    repeat_interval: Mapped[str] = mapped_column(String(50), default="never", nullable=False)
+    use_pmi: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    waiting_room_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    allow_chat_before_after: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    host_video_on: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    participant_video_on: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    audio_type: Mapped[str] = mapped_column(String(30), default="computer", nullable=False)
+    allow_join_anytime: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    mute_participants_on_entry: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    invitees: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relationships
     host: Mapped["User"] = relationship("User", back_populates="hosted_meetings")

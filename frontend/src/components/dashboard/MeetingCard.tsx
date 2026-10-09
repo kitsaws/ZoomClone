@@ -25,15 +25,16 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
   const [isCopied, setIsCopied] = useState(false);
 
   const isHost = currentUserId === meeting.host_id;
-  const isActive = meeting.status === "active";
-  const isEnded = meeting.status === "ended";
+  const isActive = meeting.status?.toLowerCase() === "active";
+  const isEnded = meeting.status?.toLowerCase() === "ended";
+  const meetingTopic = meeting.topic || meeting.title || "Zoom Meeting";
 
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
     const url = `${window.location.origin}/meeting/${meeting.id}`;
     navigator.clipboard.writeText(url);
     setIsCopied(true);
-    onCopySuccess?.(`Copied invite link for "${meeting.topic}" to clipboard!`);
+    onCopySuccess?.(`Copied invite link for "${meetingTopic}" to clipboard!`);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
@@ -43,23 +44,23 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
 
   return (
     <div
-      className={`bg-surface border border-app-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 group ${className || ""}`}
+      className={`bg-surface border border-app-border rounded-xl p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-3 group ${className || ""}`}
     >
       {/* Left: Meeting Info */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <h3 className="text-base font-bold text-text-primary group-hover:text-zoom-blue transition-colors">
-            {meeting.topic}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="text-sm font-bold text-text-primary group-hover:text-zoom-blue transition-colors">
+            {meetingTopic}
           </h3>
 
           {isActive ? (
-            <Badge variant="active" dot={true}>
+            <Badge variant="active" dot={true} size="sm">
               In Progress
             </Badge>
           ) : isEnded ? (
-            <Badge variant="ended">Ended</Badge>
+            <Badge variant="ended" size="sm">Ended</Badge>
           ) : (
-            <Badge variant="host">Scheduled</Badge>
+            <Badge variant="host" size="sm">Scheduled</Badge>
           )}
 
           {isHost && (
@@ -76,7 +77,7 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
         </div>
 
         {/* Metadata Details Row */}
-        <div className="flex items-center gap-4 text-xs text-text-secondary flex-wrap">
+        <div className="flex items-center gap-3 text-[11px] sm:text-xs text-text-secondary flex-wrap">
           {/* Meeting ID */}
           <span className="font-mono font-medium text-text-primary">
             ID: {formatMeetingId(meeting.meeting_number)}
@@ -85,7 +86,7 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
           {/* Start Time / Date */}
           {meeting.scheduled_start_time ? (
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-text-muted" />
+              <Clock className="h-3 w-3 text-text-muted" />
               <span>
                 {formatMeetingDate(meeting.scheduled_start_time)} at{" "}
                 {formatMeetingTime(meeting.scheduled_start_time)}
@@ -93,7 +94,7 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
             </span>
           ) : (
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-text-muted" />
+              <Clock className="h-3 w-3 text-text-muted" />
               <span>Instant Call</span>
             </span>
           )}
@@ -101,7 +102,7 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
           {/* Participant Count */}
           {meeting.participants && meeting.participants.length > 0 && (
             <span className="flex items-center gap-1 text-zoom-blue font-medium">
-              <Users className="h-3.5 w-3.5" />
+              <Users className="h-3 w-3" />
               <span>{meeting.participants.length} in room</span>
             </span>
           )}
@@ -109,7 +110,7 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
           {/* Passcode flag */}
           {meeting.passcode && (
             <span className="flex items-center gap-1 text-text-muted">
-              <Shield className="h-3.5 w-3.5" />
+              <Shield className="h-3 w-3" />
               <span>Passcode Protected</span>
             </span>
           )}
@@ -117,7 +118,7 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2.5 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         {/* Copy Invite Link */}
         <Button
           variant="outline"
@@ -125,12 +126,12 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
           onClick={handleCopyLink}
           leftIcon={
             isCopied ? (
-              <Check className="h-3.5 w-3.5 text-emerald-500" />
+              <Check className="h-3 w-3 text-emerald-500" />
             ) : (
-              <Copy className="h-3.5 w-3.5" />
+              <Copy className="h-3 w-3" />
             )
           }
-          className="rounded-xl px-3.5"
+          className="rounded-lg px-2.5 py-1 text-xs"
         >
           {isCopied ? "Copied" : "Copy Link"}
         </Button>
@@ -141,22 +142,23 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
             variant="primary"
             size="sm"
             onClick={handleAction}
-            rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
-            className="rounded-xl px-5 font-semibold"
+            rightIcon={<ArrowRight className="h-3 w-3" />}
+            className="rounded-lg px-3.5 py-1 text-xs font-semibold"
           >
-            {isHost && !isActive ? "Start Meeting" : "Join Call"}
+            {isHost && !isActive ? "Start" : "Join"}
           </Button>
         ) : (
           <Button
             variant="secondary"
             size="sm"
             onClick={handleAction}
-            className="rounded-xl px-4 text-text-muted"
+            className="rounded-lg px-3 py-1 text-xs text-text-muted"
           >
-            View Summary
+            Summary
           </Button>
         )}
       </div>
     </div>
   );
 };
+

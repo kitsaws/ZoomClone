@@ -53,6 +53,13 @@
   --foreground: var(--text-primary);
 }
 
+html {
+  font-size: 14.4px; /* 90% natural desktop baseline for sleek Zoom interface */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
 /* 🌙 Dark Theme */
 .dark {
   --bg-canvas: #232333;

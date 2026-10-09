@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 from app.models.participant import ParticipantRole, ParticipantStatus
 
 
@@ -36,4 +36,25 @@ class ParticipantResponse(ParticipantBase):
     joined_at: datetime
     left_at: Optional[datetime] = None
 
+    @computed_field
+    @property
+    def audio_muted(self) -> bool:
+        return self.is_audio_muted
+
+    @computed_field
+    @property
+    def video_muted(self) -> bool:
+        return self.is_video_off
+
+    @computed_field
+    @property
+    def hand_raised(self) -> bool:
+        return self.is_hand_raised
+
+    @computed_field
+    @property
+    def is_host(self) -> bool:
+        return self.role == ParticipantRole.HOST
+
     model_config = ConfigDict(from_attributes=True)
+

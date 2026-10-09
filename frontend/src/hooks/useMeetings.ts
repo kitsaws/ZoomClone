@@ -31,27 +31,31 @@ export function useMeetings() {
     fetchMeetings();
   }, [fetchMeetings]);
 
-  // Derived filtered meeting lists
-  const activeMeetings = meetings.filter((m) => m.status === "active");
-  const upcomingMeetings = meetings.filter(
-    (m) => m.status === "waiting" || (!m.actual_start_time && m.status !== "ended")
+  // Derived filtered meeting lists (case-insensitive for robust backend parity)
+  const activeMeetings = meetings.filter(
+    (m) => m.status?.toUpperCase() === "ACTIVE"
   );
-  const recentMeetings = meetings.filter((m) => m.status === "ended");
+  const upcomingMeetings = meetings.filter(
+    (m) =>
+      m.status?.toUpperCase() === "SCHEDULED" ||
+      m.status?.toUpperCase() === "WAITING" ||
+      (!m.actual_start_time && m.status?.toUpperCase() !== "ENDED")
+  );
+  const recentMeetings = meetings.filter(
+    (m) => m.status?.toUpperCase() === "ENDED"
+  );
 
   // Instant meeting creation
   const createInstantMeeting = async (topic?: string): Promise<Meeting> => {
-    const payload: MeetingCreatePayload = {
-      topic: topic || "Instant Meeting",
-      waiting_room_enabled: false,
-      scheduled_start_time: null,
-    };
-    const newMeeting = await api.createMeeting(payload);
+    const newMeeting = await api.createInstantMeeting(topic);
     await fetchMeetings();
     return newMeeting;
   };
 
   // Schedule future meeting
-  const scheduleMeeting = async (payload: MeetingCreatePayload): Promise<Meeting> => {
+  const scheduleMeeting = async (
+    payload: MeetingCreatePayload
+  ): Promise<Meeting> => {
     const newMeeting = await api.createMeeting(payload);
     await fetchMeetings();
     return newMeeting;
@@ -85,3 +89,4 @@ export function useMeetings() {
     findMeeting,
   };
 }
+

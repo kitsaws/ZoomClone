@@ -15,6 +15,7 @@ class User(TimeStampedModel):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    pmi: Mapped[str] = mapped_column(String(20), unique=True, nullable=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Relationships

@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     email: str
     display_name: str
     avatar_url: Optional[str] = None
+    pmi: Optional[str] = None
 
 
 class UserCreate(UserBase):

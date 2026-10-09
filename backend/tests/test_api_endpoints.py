@@ -41,6 +41,11 @@ def test_users_api():
 
 
 def test_meetings_upcoming_and_recent():
+    # Fetch all meetings
+    all_res = client.get("/api/v1/meetings")
+    assert all_res.status_code == 200
+    assert len(all_res.json()) >= 1
+
     # Fetch upcoming
     upcoming = client.get("/api/v1/meetings/upcoming")
     assert upcoming.status_code == 200
@@ -56,6 +61,26 @@ def test_meetings_upcoming_and_recent():
     assert len(rec_data) >= 1
     for m in rec_data:
         assert m["status"] == "ENDED"
+
+
+def test_flexible_meeting_creation():
+    # Instant meeting via POST /api/v1/meetings
+    res_inst = client.post("/api/v1/meetings", json={"topic": "Universal Instant Sync"})
+    assert res_inst.status_code == 201
+    assert res_inst.json()["status"] == "ACTIVE"
+    assert res_inst.json()["topic"] == "Universal Instant Sync"
+    assert res_inst.json()["title"] == "Universal Instant Sync"
+
+    # Scheduled meeting via POST /api/v1/meetings
+    start = (datetime.utcnow() + timedelta(days=1)).isoformat()
+    res_sched = client.post("/api/v1/meetings", json={
+        "topic": "Universal Scheduled Review",
+        "scheduled_start_time": start,
+        "duration_minutes": 60
+    })
+    assert res_sched.status_code == 201
+    assert res_sched.json()["status"] == "SCHEDULED"
+
 
 
 def test_instant_meeting_creation():
@@ -205,3 +230,27 @@ def test_meeting_lifecycle_start_and_end():
     # Cannot start an ended meeting -> 400
     bad_start = client.post(f"/api/v1/meetings/{meeting_id}/start")
     assert bad_start.status_code == 400
+
+
+def test_livekit_token_generation():
+    # 1. Create a meeting
+    m_res = client.post("/api/v1/meetings/instant", json={"title": "LiveKit Token Test"})
+    assert m_res.status_code == 201
+    meeting_id = m_res.json()["id"]
+
+    # 2. Request LiveKit token for guest
+    token_payload = {
+        "display_name": "Test Guest User",
+        "user_id": None,
+        "passcode": None
+    }
+    t_res = client.post(f"/api/v1/meetings/{meeting_id}/token", json=token_payload)
+    assert t_res.status_code == 200
+    data = t_res.json()
+    assert "token" in data
+    assert len(data["token"]) > 30
+    assert data["room_name"] == meeting_id
+    assert data["participant_name"] == "Test Guest User"
+    assert data["is_host"] is False
+    assert "url" in data
+

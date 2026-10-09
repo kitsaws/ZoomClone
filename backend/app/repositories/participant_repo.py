@@ -11,6 +11,23 @@ class ParticipantRepository:
         return db.scalar(select(MeetingParticipant).where(MeetingParticipant.id == participant_id))
 
     @staticmethod
+    def get_by_id_or_user_id(
+        db: Session,
+        id_or_user_id: str,
+        meeting_id: Optional[str] = None
+    ) -> Optional[MeetingParticipant]:
+        p = db.scalar(select(MeetingParticipant).where(MeetingParticipant.id == id_or_user_id))
+        if p:
+            return p
+        query = select(MeetingParticipant).where(
+            MeetingParticipant.user_id == id_or_user_id,
+            MeetingParticipant.status == ParticipantStatus.IN_MEETING
+        )
+        if meeting_id:
+            query = query.where(MeetingParticipant.meeting_id == meeting_id)
+        return db.scalar(query)
+
+    @staticmethod
     def get_by_meeting_and_user(
         db: Session,
         meeting_id: str,
@@ -23,6 +40,21 @@ class ParticipantRepository:
                 MeetingParticipant.status == ParticipantStatus.IN_MEETING
             )
         )
+
+    @staticmethod
+    def get_active_by_display_name(
+        db: Session,
+        meeting_id: str,
+        display_name: str
+    ) -> Optional[MeetingParticipant]:
+        return db.scalar(
+            select(MeetingParticipant).where(
+                MeetingParticipant.meeting_id == meeting_id,
+                MeetingParticipant.display_name == display_name,
+                MeetingParticipant.status == ParticipantStatus.IN_MEETING
+            )
+        )
+
 
     @staticmethod
     def get_meeting_participants(

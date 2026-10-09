@@ -42,7 +42,7 @@ def leave_meeting(
     db: Session = Depends(get_db)
 ):
     """Marks the participant as LEFT and records the exit timestamp."""
-    return participant_service.leave_meeting(db, participant_id)
+    return participant_service.leave_meeting(db, participant_id, meeting_id=meeting_id)
 
 
 @router.patch("/{participant_id}/state", response_model=ParticipantResponse, summary="Update participant mute/video state")
@@ -53,4 +53,5 @@ def update_participant_state(
     db: Session = Depends(get_db)
 ):
     """Toggles audio mute, video off, hand raise, or role state."""
-    return participant_service.update_participant_state(db, participant_id, payload)
+    return participant_service.update_participant_state(db, participant_id, payload, meeting_id=meeting_id)
+

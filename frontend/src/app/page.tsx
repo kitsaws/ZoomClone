@@ -88,20 +88,20 @@ export default function HomePage() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col justify-between overflow-y-auto max-h-screen">
         {/* Top Navbar */}
-        <header className="border-b border-app-border px-6 py-4 flex items-center justify-between bg-surface/80 backdrop-blur-md sticky top-0 z-20">
+        <header className="border-b border-app-border px-5 py-3 flex items-center justify-between bg-surface/80 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-tight text-text-primary">
+            <span className="text-base font-bold tracking-tight text-text-primary">
               Zoom Workplace Dashboard
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {/* Theme Toggle Pill */}
-            <div className="bg-surface-subtle border border-app-border rounded-xl p-1 flex items-center shadow-inner">
+            <div className="bg-surface-subtle border border-app-border rounded-xl p-0.5 flex items-center shadow-inner">
               <button
                 onClick={() => toggleTheme("light")}
                 className={cn(
-                  "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                  "p-1 rounded-lg text-xs transition-all cursor-pointer",
                   theme === "light" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
                 )}
                 title="Light Mode"
@@ -111,7 +111,7 @@ export default function HomePage() {
               <button
                 onClick={() => toggleTheme("dark")}
                 className={cn(
-                  "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                  "p-1 rounded-lg text-xs transition-all cursor-pointer",
                   theme === "dark" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
                 )}
                 title="Dark Mode"
@@ -121,7 +121,7 @@ export default function HomePage() {
               <button
                 onClick={() => toggleTheme("system")}
                 className={cn(
-                  "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                  "p-1 rounded-lg text-xs transition-all cursor-pointer",
                   theme === "system" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
                 )}
                 title="System Mode"
@@ -133,7 +133,7 @@ export default function HomePage() {
             {/* Component Gallery Link */}
             <Link
               href="/components"
-              className="text-xs font-semibold bg-surface border border-app-border px-3 py-1.5 rounded-xl hover:text-zoom-blue transition-colors flex items-center gap-1.5 shadow-sm"
+              className="text-xs font-semibold bg-surface border border-app-border px-2.5 py-1 rounded-xl hover:text-zoom-blue transition-colors flex items-center gap-1.5 shadow-sm"
             >
               <Sparkles className="h-3.5 w-3.5 text-zoom-blue" />
               <span className="hidden sm:inline">UI Gallery</span>
@@ -142,7 +142,7 @@ export default function HomePage() {
         </header>
 
         {/* Dashboard Center Container */}
-        <div className="max-w-5xl mx-auto w-full px-6 py-8 space-y-8 flex-1">
+        <div className="max-w-4xl mx-auto w-full px-5 py-6 space-y-5 flex-1">
           {/* Real-time Clock Widget & User Greeting */}
           <ClockWidget userName={currentUser?.display_name} />
 
@@ -166,9 +166,9 @@ export default function HomePage() {
         </div>
 
         {/* Bottom Footer */}
-        <footer className="border-t border-app-border py-4 px-6 text-center text-xs text-text-muted max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2">
+        <footer className="border-t border-app-border py-3 px-5 text-center text-xs text-text-muted max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>© 2026 Zoom Workplace Clone. Built with Next.js &amp; FastAPI.</span>
-          <div className="flex items-center gap-4 text-[11px]">
+          <div className="flex items-center gap-3 text-[11px]">
             <Link href="/components" className="hover:text-text-primary underline">
               Component Showcase
             </Link>
@@ -185,6 +185,7 @@ export default function HomePage() {
             </a>
           </div>
         </footer>
+
       </main>
 
       {/* MODALS */}

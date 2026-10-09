@@ -43,7 +43,12 @@ class MeetingService:
 
         host_user = user_repo.get_by_id(db, host_id)
         if not host_user:
-            raise NotFoundException(f"Host user with id '{host_id}' not found.")
+            default_user = user_repo.get_default_user(db)
+            if default_user:
+                host_user = default_user
+                host_id = default_user.id
+            else:
+                raise NotFoundException(f"Host user with id '{host_id}' not found.")
 
         meeting_id = str(uuid.uuid4())
         meeting_number = self.generate_meeting_number(db)
@@ -96,11 +101,22 @@ class MeetingService:
 
         host_user = user_repo.get_by_id(db, host_id)
         if not host_user:
-            raise NotFoundException(f"Host user with id '{host_id}' not found.")
+            default_user = user_repo.get_default_user(db)
+            if default_user:
+                host_user = default_user
+                host_id = default_user.id
+            else:
+                raise NotFoundException(f"Host user with id '{host_id}' not found.")
 
         meeting_id = str(uuid.uuid4())
-        meeting_number = self.generate_meeting_number(db)
+        if payload.use_pmi and host_user.pmi:
+            meeting_number = host_user.pmi
+        else:
+            meeting_number = self.generate_meeting_number(db)
         clean_number = meeting_number.replace(" ", "")
+
+        import json
+        invitees_str = json.dumps(payload.invitees) if payload.invitees else None
 
         meeting_data = {
             "id": meeting_id,
@@ -113,6 +129,17 @@ class MeetingService:
             "start_time": payload.start_time,
             "duration_minutes": payload.duration_minutes,
             "invite_link": f"/meeting/{clean_number}",
+            "timezone": payload.timezone or "India (GMT+5:30)",
+            "repeat_interval": payload.repeat_interval or "never",
+            "use_pmi": bool(payload.use_pmi),
+            "waiting_room_enabled": bool(payload.waiting_room_enabled),
+            "allow_chat_before_after": bool(payload.allow_chat_before_after),
+            "host_video_on": bool(payload.host_video_on),
+            "participant_video_on": bool(payload.participant_video_on),
+            "audio_type": payload.audio_type or "computer",
+            "allow_join_anytime": bool(payload.allow_join_anytime),
+            "mute_participants_on_entry": bool(payload.mute_participants_on_entry),
+            "invitees": invitees_str,
         }
 
         return meeting_repo.create(db, meeting_data)

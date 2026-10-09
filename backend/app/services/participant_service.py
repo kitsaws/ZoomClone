@@ -56,7 +56,20 @@ class ParticipantService:
                 # Check if already active in this meeting
                 existing = participant_repo.get_by_meeting_and_user(db, meeting.id, user.id)
                 if existing:
-                    return existing
+                    # Update local state preferences and return existing
+                    return participant_repo.update_state(db, existing.id, {
+                        "is_audio_muted": payload.is_audio_muted,
+                        "is_video_off": payload.is_video_off,
+                    }) or existing
+        else:
+            # Check if active guest with same name already joined
+            existing_guest = participant_repo.get_active_by_display_name(db, meeting.id, display_name)
+            if existing_guest:
+                return participant_repo.update_state(db, existing_guest.id, {
+                    "is_audio_muted": payload.is_audio_muted,
+                    "is_video_off": payload.is_video_off,
+                }) or existing_guest
+
 
         # Create new participant
         participant_data = {
@@ -75,24 +88,30 @@ class ParticipantService:
 
         return participant_repo.create(db, participant_data)
 
-    def leave_meeting(self, db: Session, participant_id: str) -> MeetingParticipant:
-        participant = participant_repo.get_by_id(db, participant_id)
+    def leave_meeting(
+        self,
+        db: Session,
+        participant_id: str,
+        meeting_id: Optional[str] = None
+    ) -> MeetingParticipant:
+        participant = participant_repo.get_by_id_or_user_id(db, participant_id, meeting_id)
         if not participant:
             raise NotFoundException(f"Participant '{participant_id}' not found.")
-        return participant_repo.mark_left(db, participant_id)
+        return participant_repo.mark_left(db, participant.id)
 
     def update_participant_state(
         self,
         db: Session,
         participant_id: str,
-        payload: ParticipantStateUpdate
+        payload: ParticipantStateUpdate,
+        meeting_id: Optional[str] = None
     ) -> MeetingParticipant:
-        participant = participant_repo.get_by_id(db, participant_id)
+        participant = participant_repo.get_by_id_or_user_id(db, participant_id, meeting_id)
         if not participant:
             raise NotFoundException(f"Participant '{participant_id}' not found.")
 
         updates = payload.model_dump(exclude_unset=True)
-        return participant_repo.update_state(db, participant_id, updates)
+        return participant_repo.update_state(db, participant.id, updates)
 
 
 participant_service = ParticipantService()

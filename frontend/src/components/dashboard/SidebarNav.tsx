@@ -46,27 +46,27 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   return (
     <aside
       className={cn(
-        "w-20 sm:w-24 bg-surface border-r border-app-border py-5 flex flex-col items-center justify-between shrink-0 select-none shadow-sm transition-colors",
+        "w-16 sm:w-20 bg-surface border-r border-app-border py-4 flex flex-col items-center justify-between shrink-0 select-none shadow-sm transition-colors",
         className
       )}
     >
       {/* Top Brand Icon */}
-      <div className="flex flex-col items-center gap-6 w-full">
+      <div className="flex flex-col items-center gap-4 w-full">
         <Link
           href="/"
           className="flex flex-col items-center gap-1 group"
           title="Zoom Workplace"
         >
-          <div className="h-10 w-10 bg-zoom-blue text-white rounded-xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-            <Video className="h-6 w-6" />
+          <div className="h-8 w-8 bg-zoom-blue text-white rounded-xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+            <Video className="h-4.5 w-4.5" />
           </div>
-          <span className="text-[10px] font-black tracking-tight text-text-primary font-wordmark">
+          <span className="text-[9px] font-black tracking-tight text-text-primary font-wordmark">
             zoom
           </span>
         </Link>
 
         {/* Navigation Items */}
-        <nav className="flex flex-col items-center gap-2 w-full px-2">
+        <nav className="flex flex-col items-center gap-1.5 w-full px-1.5">
           {navItems.map((item) => {
             const isActive = activeNav === item.id;
             return (
@@ -74,7 +74,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                 key={item.id}
                 onClick={() => onSelectNav?.(item.id)}
                 className={cn(
-                  "w-full flex flex-col items-center justify-center py-2.5 px-1 rounded-xl transition-all relative cursor-pointer group",
+                  "w-full flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all relative cursor-pointer group",
                   isActive
                     ? "bg-surface-hover text-zoom-blue font-bold shadow-sm"
                     : "text-text-muted hover:text-text-primary hover:bg-surface-subtle"
@@ -83,18 +83,18 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
               >
                 {/* Left Active Accent Bar */}
                 {isActive && (
-                  <span className="absolute -left-2 top-2 bottom-2 w-1 bg-zoom-blue rounded-r-full" />
+                  <span className="absolute -left-1.5 top-1.5 bottom-1.5 w-1 bg-zoom-blue rounded-r-full" />
                 )}
 
                 <div className="relative">
                   {item.icon}
                   {item.badge && (
-                    <span className="absolute -top-1 -right-2 bg-zoom-orange text-white text-[9px] font-bold h-3.5 w-3.5 flex items-center justify-center rounded-full">
+                    <span className="absolute -top-1 -right-2 bg-zoom-orange text-white text-[8px] font-bold h-3 w-3 flex items-center justify-center rounded-full">
                       {item.badge}
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] mt-1 tracking-tight truncate max-w-full">
+                <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-full">
                   {item.label}
                 </span>
               </button>
@@ -104,38 +104,39 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       </div>
 
       {/* Bottom Profile & Settings */}
-      <div className="flex flex-col items-center gap-3 w-full px-2">
+      <div className="flex flex-col items-center gap-2 w-full px-1.5">
         {/* Component Showcase Gallery Shortcut */}
         <Link
           href="/components"
-          className="p-2.5 rounded-xl text-text-muted hover:text-zoom-blue hover:bg-surface-subtle transition-colors relative group"
+          className="p-2 rounded-xl text-text-muted hover:text-zoom-blue hover:bg-surface-subtle transition-colors relative group"
           title="Open UI Component Gallery"
         >
-          <Sparkles className="h-5 w-5 text-zoom-blue" />
+          <Sparkles className="h-4 w-4 text-zoom-blue" />
         </Link>
 
         {/* Settings button */}
         <button
           onClick={() => alert("Settings dialog")}
-          className="p-2.5 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-subtle transition-colors cursor-pointer"
+          className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-subtle transition-colors cursor-pointer"
           title="Settings"
         >
-          <Settings className="h-5 w-5" />
+          <Settings className="h-4 w-4" />
         </button>
 
         {/* User Persona Avatar */}
         <button
           onClick={onOpenUserSwitcher}
-          className="mt-1 p-1 rounded-full hover:ring-2 hover:ring-zoom-blue/50 transition-all cursor-pointer group"
+          className="mt-0.5 p-0.5 rounded-full hover:ring-2 hover:ring-zoom-blue/50 transition-all cursor-pointer group"
           title={currentUser ? `Signed in as ${currentUser.display_name} (Click to switch)` : "Click to sign in"}
         >
           <Avatar
             name={currentUser?.display_name || "Guest"}
-            size="md"
+            size="sm"
             status={currentUser ? "online" : "none"}
           />
         </button>
       </div>
     </aside>
   );
+
 };

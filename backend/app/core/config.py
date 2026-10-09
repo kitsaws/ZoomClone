@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     # Database connection string (SQLite by default)
     DATABASE_URL: str = "sqlite:///./zoom_clone.db"
     
+    # LiveKit SFU Configuration
+    LIVEKIT_URL: str = "wss://zoom-clone-demo.livekit.cloud"
+    LIVEKIT_API_KEY: str = "devkey"
+    LIVEKIT_API_SECRET: str = "secret"
+    
     # CORS Origins
     CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
