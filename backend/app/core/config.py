@@ -25,16 +25,20 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
+        "https://zoomclone-vrmo.onrender.com",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
+        if isinstance(v, str):
+            if v == "*":
+                return ["*"]
+            if not v.startswith("["):
+                return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             return v
-        return []
+        return ["*"]
 
     model_config = SettingsConfigDict(
         env_file=".env",

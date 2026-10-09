@@ -37,23 +37,6 @@ export default function HomePage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingTitle, setConnectingTitle] = useState("Starting meeting...");
 
-  // Theme State
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
-
-  const toggleTheme = (mode: "light" | "dark" | "system") => {
-    setTheme(mode);
-    const root = document.documentElement;
-    if (mode === "dark") {
-      root.classList.add("dark");
-    } else if (mode === "light") {
-      root.classList.remove("dark");
-    } else {
-      const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (isSystemDark) root.classList.add("dark");
-      else root.classList.remove("dark");
-    }
-  };
-
   // Instant meeting handler with Zoom connecting animation
   const handleInstantMeeting = async () => {
     setConnectingTitle("Starting instant meeting...");
@@ -156,13 +139,11 @@ export default function HomePage() {
         onSignOut={logout}
       />
 
-      {/* 6. Settings Modal (Theme & Persona) */}
+      {/* 6. Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         currentUser={currentUser}
-        theme={theme}
-        onToggleTheme={toggleTheme}
       />
     </div>
   );

@@ -3,84 +3,24 @@
 import React from "react";
 import { Modal } from "@/components/ui/Modal";
 import { User } from "@/types/meeting";
-import { Sun, Moon, Laptop, Palette, UserCheck, ShieldCheck, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { UserCheck, ShieldCheck } from "lucide-react";
 
 export interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: User | null;
-  theme: "light" | "dark" | "system";
-  onToggleTheme: (mode: "light" | "dark" | "system") => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   currentUser,
-  theme,
-  onToggleTheme,
 }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings" maxWidth="md">
       <div className="space-y-6 text-text-primary">
-        {/* Appearance / Theme */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-text-muted">
-            <Palette className="h-4 w-4 text-zoom-blue" />
-            <span>Appearance & Theme</span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            {/* Light Mode */}
-            <button
-              type="button"
-              onClick={() => onToggleTheme("light")}
-              className={cn(
-                "p-3 rounded-2xl border flex flex-col items-center gap-2 text-xs font-semibold transition-all cursor-pointer",
-                theme === "light"
-                  ? "bg-zoom-blue/10 border-zoom-blue text-zoom-blue shadow-sm"
-                  : "bg-surface-subtle border-app-border text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-              )}
-            >
-              <Sun className="h-5 w-5" />
-              <span>Light</span>
-            </button>
-
-            {/* Dark Mode */}
-            <button
-              type="button"
-              onClick={() => onToggleTheme("dark")}
-              className={cn(
-                "p-3 rounded-2xl border flex flex-col items-center gap-2 text-xs font-semibold transition-all cursor-pointer",
-                theme === "dark"
-                  ? "bg-zoom-blue/10 border-zoom-blue text-zoom-blue shadow-sm"
-                  : "bg-surface-subtle border-app-border text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-              )}
-            >
-              <Moon className="h-5 w-5" />
-              <span>Dark</span>
-            </button>
-
-            {/* System Mode */}
-            <button
-              type="button"
-              onClick={() => onToggleTheme("system")}
-              className={cn(
-                "p-3 rounded-2xl border flex flex-col items-center gap-2 text-xs font-semibold transition-all cursor-pointer",
-                theme === "system"
-                  ? "bg-zoom-blue/10 border-zoom-blue text-zoom-blue shadow-sm"
-                  : "bg-surface-subtle border-app-border text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-              )}
-            >
-              <Laptop className="h-5 w-5" />
-              <span>System</span>
-            </button>
-          </div>
-        </div>
-
         {/* User Persona Info */}
-        <div className="space-y-3 pt-2 border-t border-app-border">
+        <div className="space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-text-muted">
             <UserCheck className="h-4 w-4 text-zoom-blue" />
             <span>Active Account Persona</span>
@@ -105,18 +45,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* App Info */}
-        <div className="pt-2 border-t border-app-border flex items-center justify-between text-xs text-text-muted">
+        <div className="pt-3 border-t border-app-border flex items-center justify-between text-xs text-text-muted">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
             <span>Zoom Workplace v6.2.0</span>
           </div>
-          <a
-            href="/components"
-            className="flex items-center gap-1 text-zoom-blue hover:underline font-semibold"
-          >
-            <Sparkles className="h-3 w-3" />
-            <span>UI Components</span>
-          </a>
+          <span className="text-[11px] text-text-muted">Desktop Client Build</span>
         </div>
       </div>
     </Modal>

@@ -12,8 +12,16 @@ import {
   LiveKitTokenPayload,
 } from "@/types/meeting";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const getApiBaseUrl = () => {
+  let url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  url = url.replace(/\/+$/, ""); // remove trailing slashes
+  if (!url.endsWith("/api/v1") && !url.includes("/api/")) {
+    url = `${url}/api/v1`;
+  }
+  return url;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;

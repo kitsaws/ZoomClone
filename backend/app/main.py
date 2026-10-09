@@ -30,10 +30,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Configuration
+# CORS Configuration allowing Vercel, Render, and Localhost origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else ["*"],
+    allow_origin_regex=r"^https://.*\.vercel\.app$|^https://.*\.onrender\.com$|^http://localhost:\d+$|^http://127\.0\.0\.1:\d+$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,8 +49,9 @@ async def domain_exception_handler(request: Request, exc: DomainException):
     )
 
 
-# Mount API v1 Routes
+# Mount API Routes at both /api/v1 and root fallback
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router, include_in_schema=False)
 
 
 @app.get("/", tags=["Health"])

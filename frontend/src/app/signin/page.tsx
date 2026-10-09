@@ -10,7 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { User } from "@/types/meeting";
-import { Video, Link2, Sparkles } from "lucide-react";
+import { Video, Link2 } from "lucide-react";
 import Link from "next/link";
 
 export default function SignInPage() {
@@ -45,16 +45,6 @@ export default function SignInPage() {
             zoom<span className="text-zoom-blue text-xs align-super ml-1 font-sans font-bold">workplace</span>
           </span>
         </Link>
-
-        <div className="flex items-center gap-4">
-          <Link
-            href="/components"
-            className="text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-zoom-blue" />
-            <span>UI Components Gallery</span>
-          </Link>
-        </div>
       </header>
 
       {/* Main Grid Content */}
@@ -94,9 +84,6 @@ export default function SignInPage() {
       <footer className="border-t border-app-border py-4 px-6 text-center text-xs text-text-muted max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2">
         <span>© 2026 Zoom Clone. Built with Next.js, TypeScript, Tailwind CSS &amp; FastAPI.</span>
         <div className="flex items-center gap-4 text-[11px]">
-          <Link href="/components" className="hover:text-text-primary underline">
-            Component Showcase
-          </Link>
           <a
             href="http://localhost:8000/docs"
             target="_blank"
