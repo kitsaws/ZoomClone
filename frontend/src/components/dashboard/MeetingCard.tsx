@@ -138,6 +138,7 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
     <div
       className={cn(
         "rounded-2xl border transition-all duration-200 p-4 sm:p-5 relative group select-none shadow-sm",
+        isMenuOpen ? "z-30" : "z-auto",
         /* If currTime < meeting start time -> no card bg color set (transparent / neutral container) */
         isFutureMeeting
           ? "bg-transparent border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-500"
@@ -199,9 +200,9 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({
             <MoreHorizontal className="h-4 w-4" />
           </button>
 
-          {/* Context Dropdown Menu */}
+          {/* Context Dropdown Menu (Opens downwards to prevent clipping by scroll container) */}
           {isMenuOpen && (
-            <div className="absolute right-0 bottom-full mb-1 w-48 bg-surface border border-app-border rounded-2xl shadow-2xl z-50 p-1.5 space-y-1 animate-in fade-in zoom-in-95 text-xs">
+            <div className="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-[#1C1F2E] border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl z-[99] p-1.5 space-y-1 animate-in fade-in zoom-in-95 text-xs">
               {/* Start / Join Meeting */}
               {!isEnded && (
                 <button

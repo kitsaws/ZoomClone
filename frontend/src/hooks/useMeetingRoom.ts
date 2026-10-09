@@ -65,18 +65,23 @@ export function useMeetingRoom({
   const [activeReactions, setActiveReactions] = useState<ReactionItem[]>([]);
   const [isScreenSharing, setIsScreenSharing] = useState<boolean>(false);
 
+  // Refs for stable callbacks without triggering effect re-connections
   const roomRef = useRef<Room | null>(null);
   const localParticipantIdRef = useRef<string | null>(null);
   const meetingRef = useRef<Meeting | null>(null);
   const isHandRaisedRef = useRef<boolean>(false);
   const remoteHandsRef = useRef<Record<string, boolean>>({});
+  const isMutedRef = useRef<boolean>(initialAudioMuted);
+  const isVideoOffRef = useRef<boolean>(initialVideoOff);
 
   // In-Room Interactive Controls State
   const [isMuted, setIsMuted] = useState<boolean>(initialAudioMuted);
   const [isVideoOff, setIsVideoOff] = useState<boolean>(initialVideoOff);
   const [isHandRaised, setIsHandRaised] = useState<boolean>(false);
 
-  // Sync ref
+  // Keep refs in sync with state
+  isMutedRef.current = isMuted;
+  isVideoOffRef.current = isVideoOff;
   isHandRaisedRef.current = isHandRaised;
 
   // View & UI Navigation State
@@ -115,17 +120,9 @@ export function useMeetingRoom({
     passcode,
   };
 
-  // Live Duration Timer
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Stable sync function combining local state, DB state and LiveKit remote peers
-  const syncLiveKitParticipants = useCallback((room?: Room | null) => {
-    const activeRoom = room || roomRef.current;
+  // Stable, 100% SFU-driven participant synchronization
+  const syncLiveKitParticipants = useCallback((roomInstance?: Room | null) => {
+    const activeRoom = roomInstance || roomRef.current;
     const meetingData = meetingRef.current;
     if (!meetingData) return;
 
@@ -134,33 +131,53 @@ export function useMeetingRoom({
     const isUserHost = Boolean(user?.id && hostId && user.id === hostId);
 
     // 1. Local Participant
-    const localPartId = localParticipantIdRef.current || (activeRoom?.localParticipant ? activeRoom.localParticipant.identity : `user_${user?.id || "guest"}`);
-    const isLocalHost = isUserHost || (activeRoom?.localParticipant ? activeRoom.localParticipant.identity === hostId : false);
-    
+    const localPartId =
+      localParticipantIdRef.current ||
+      (activeRoom?.localParticipant
+        ? activeRoom.localParticipant.identity
+        : `user_${user?.id || "guest"}`);
+    const isLocalHost =
+      isUserHost ||
+      (activeRoom?.localParticipant
+        ? activeRoom.localParticipant.identity === hostId
+        : false);
+
+    const isLocalMicMuted = activeRoom?.localParticipant
+      ? !activeRoom.localParticipant.isMicrophoneEnabled
+      : isMutedRef.current;
+    const isLocalCamMuted = activeRoom?.localParticipant
+      ? !activeRoom.localParticipant.isCameraEnabled
+      : isVideoOffRef.current;
+
+    const localDisplayName =
+      configRef.current.initialName ||
+      user?.display_name ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("zoom_saved_name")
+        : null) ||
+      (user?.id ? "Host" : "You");
+
     const localPartObj: MeetingParticipant = {
       id: localPartId,
       meeting_id: meetingData.id,
       user_id: user?.id || null,
-      display_name:
-        configRef.current.initialName ||
-        user?.display_name ||
-        (typeof window !== "undefined" ? localStorage.getItem("zoom_saved_name") : null) ||
-        "You",
+      display_name: localDisplayName,
       role: isLocalHost ? "host" : "participant",
       is_guest: !user?.id,
-      audio_muted: activeRoom?.localParticipant ? !activeRoom.localParticipant.isMicrophoneEnabled : isMuted,
-      video_muted: activeRoom?.localParticipant ? !activeRoom.localParticipant.isCameraEnabled : isVideoOff,
+      audio_muted: isLocalMicMuted,
+      video_muted: isLocalCamMuted,
       hand_raised: isHandRaisedRef.current,
       is_host: isLocalHost,
     };
 
     setLocalParticipant(localPartObj);
 
-    // 2. Remote Participants from LiveKit (if connected)
-    if (activeRoom && activeRoom.state === ConnectionState.Connected) {
-      const parts: MeetingParticipant[] = [localPartObj];
+    // 2. Remote Participants directly from LiveKit SFU Room
+    const parts: MeetingParticipant[] = [localPartObj];
+
+    if (activeRoom) {
       activeRoom.remoteParticipants.forEach((rp) => {
-        const isRemoteHost = rp.identity === hostId;
+        const isRemoteHost = Boolean(rp.identity === hostId || rp.name?.toLowerCase().includes("host"));
         parts.push({
           id: rp.identity,
           meeting_id: meetingData.id,
@@ -174,11 +191,12 @@ export function useMeetingRoom({
           is_host: isRemoteHost,
         });
       });
-      setParticipants(parts);
     }
-  }, [isMuted, isVideoOff]);
 
-  // 1. Initial Room Setup & Participant Registration
+    setParticipants(parts);
+  }, []);
+
+  // Initial Room Setup & SFU Connection (strictly runs ONCE per meetingId)
   useEffect(() => {
     if (!meetingId) return;
 
@@ -209,7 +227,7 @@ export function useMeetingRoom({
           (typeof window !== "undefined" ? localStorage.getItem("zoom_saved_name") : null) ||
           (user?.id ? "Host" : "Guest User");
 
-        // Generate or retrieve persistent guest session ID so guest instances never collide
+        // Persistent guest session ID to avoid identity collisions
         let guestSessionId = "";
         if (typeof window !== "undefined") {
           guestSessionId = sessionStorage.getItem(`zoom_guest_id_${meetingData.id}`) || "";
@@ -219,7 +237,7 @@ export function useMeetingRoom({
           }
         }
 
-        // Register participant record in backend DB
+        // Register initial participant record in DB
         let activeLocal: MeetingParticipant | null = null;
         try {
           activeLocal = await api.joinMeeting(meetingData.id, {
@@ -232,22 +250,10 @@ export function useMeetingRoom({
           console.warn("Join API note:", joinErr);
         }
 
-        if (activeLocal) {
+        if (activeLocal && isMounted) {
           localParticipantIdRef.current = activeLocal.id;
-          if (isMounted) {
-            setLocalParticipant(activeLocal);
-            setIsMuted(activeLocal.audio_muted ?? audioMuted);
-            setIsVideoOff(activeLocal.video_muted ?? videoOff);
-          }
+          setLocalParticipant(activeLocal);
         }
-
-        // Initial roster fetch
-        try {
-          const currentRoster = await api.getParticipants(meetingData.id);
-          if (isMounted && currentRoster && currentRoster.length > 0) {
-            setParticipants(currentRoster);
-          }
-        } catch {}
 
         // 2. Request scoped LiveKit Token from backend
         let lkTokenData: LiveKitTokenResponse | null = null;
@@ -276,18 +282,21 @@ export function useMeetingRoom({
             room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
               if (isMounted) {
                 setLiveKitState(state);
-                if (state === ConnectionState.Connected) {
-                  syncLiveKitParticipants(room);
-                }
+                syncLiveKitParticipants(room);
               }
             });
 
-            // Participant presence events
-            room.on(RoomEvent.ParticipantConnected, () => {
-              if (isMounted) syncLiveKitParticipants(room);
+            // Remote Participant joins SFU
+            room.on(RoomEvent.ParticipantConnected, (rp: RemoteParticipant) => {
+              console.log("[SFU] Remote participant connected:", rp.identity, rp.name);
+              if (isMounted) {
+                syncLiveKitParticipants(room);
+              }
             });
 
+            // Remote Participant leaves SFU
             room.on(RoomEvent.ParticipantDisconnected, (rp: RemoteParticipant) => {
+              console.log("[SFU] Remote participant disconnected:", rp.identity);
               if (isMounted) {
                 setRemoteVideoTracks((prev) => {
                   const next = new Map(prev);
@@ -299,7 +308,7 @@ export function useMeetingRoom({
               }
             });
 
-            // Track events
+            // Track mute / unmute events from remote peers
             room.on(RoomEvent.TrackMuted, () => {
               if (isMounted) syncLiveKitParticipants(room);
             });
@@ -316,7 +325,7 @@ export function useMeetingRoom({
               if (isMounted) syncLiveKitParticipants(room);
             });
 
-            // Remote Track Subscription
+            // Remote Track Subscription (Audio & Video)
             room.on(
               RoomEvent.TrackSubscribed,
               (
@@ -324,6 +333,7 @@ export function useMeetingRoom({
                 publication: RemoteTrackPublication,
                 participant: RemoteParticipant
               ) => {
+                console.log("[SFU] Remote track subscribed:", track.kind, participant.identity);
                 if (track.kind === Track.Kind.Audio) {
                   track.attach();
                 } else if (track.kind === Track.Kind.Video) {
@@ -342,6 +352,7 @@ export function useMeetingRoom({
                 publication: RemoteTrackPublication,
                 participant: RemoteParticipant
               ) => {
+                console.log("[SFU] Remote track unsubscribed:", track.kind, participant.identity);
                 if (track.kind === Track.Kind.Audio) {
                   track.detach();
                 } else if (track.kind === Track.Kind.Video) {
@@ -355,7 +366,7 @@ export function useMeetingRoom({
               }
             );
 
-            // Local track publication
+            // Local track publication events
             room.on(RoomEvent.LocalTrackPublished, (publication: LocalTrackPublication) => {
               if (publication.track?.kind === Track.Kind.Video) {
                 setLocalVideoTrack(publication.track);
@@ -370,14 +381,14 @@ export function useMeetingRoom({
               if (isMounted) syncLiveKitParticipants(room);
             });
 
-            // Active speakers
+            // Active speakers for green audio highlighting
             room.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
               if (isMounted) {
                 setSpeakingParticipantIds(new Set(speakers.map((s) => s.identity)));
               }
             });
 
-            // Real-time signaling via LiveKit Data Packets
+            // Real-time SFU Data Channel Signaling
             room.on(
               RoomEvent.DataReceived,
               (payload: Uint8Array, participant?: RemoteParticipant) => {
@@ -397,6 +408,7 @@ export function useMeetingRoom({
                     if (room.localParticipant) {
                       room.localParticipant.setMicrophoneEnabled(false).catch(console.warn);
                       setIsMuted(true);
+                      isMutedRef.current = true;
                     }
                   } else if (data.type === "HAND_RAISE") {
                     remoteHandsRef.current[data.participantId] = data.hand_raised;
@@ -443,28 +455,51 @@ export function useMeetingRoom({
               }
             );
 
-            // Connect to LiveKit SFU
-            await room.connect(lkTokenData.url, lkTokenData.token).catch((err) => {
-              console.warn("LiveKit connect error:", err);
-            });
+            // Connect to SFU
+            await room.connect(lkTokenData.url, lkTokenData.token);
 
             if (isMounted) {
               setLiveKitState(room.state);
               if (room.state === ConnectionState.Connected) {
+                // Publish local tracks based on initial settings
                 if (!audioMuted) {
-                  room.localParticipant.setMicrophoneEnabled(true).catch(console.warn);
+                  await room.localParticipant.setMicrophoneEnabled(true).catch(console.warn);
+                } else {
+                  await room.localParticipant.setMicrophoneEnabled(false).catch(console.warn);
                 }
+
                 if (!videoOff) {
-                  room.localParticipant
-                    .setCameraEnabled(true)
-                    .then(() => {
-                      const pub = Array.from(
-                        room.localParticipant.videoTrackPublications.values()
-                      )[0];
-                      if (pub?.videoTrack) setLocalVideoTrack(pub.videoTrack);
-                    })
-                    .catch(console.warn);
+                  await room.localParticipant.setCameraEnabled(true).catch(console.warn);
+                  const pub = Array.from(
+                    room.localParticipant.videoTrackPublications.values()
+                  )[0];
+                  if (pub?.videoTrack) setLocalVideoTrack(pub.videoTrack);
+                } else {
+                  await room.localParticipant.setCameraEnabled(false).catch(console.warn);
+                  setLocalVideoTrack(null);
                 }
+
+                // Check and attach any already subscribed remote tracks
+                const existingTracks = new Map<string, Track>();
+                room.remoteParticipants.forEach((rp) => {
+                  rp.trackPublications.forEach((pub) => {
+                    if (pub.track) {
+                      if (pub.track.kind === Track.Kind.Audio) {
+                        pub.track.attach();
+                      } else if (pub.track.kind === Track.Kind.Video) {
+                        existingTracks.set(rp.identity, pub.track);
+                      }
+                    }
+                  });
+                });
+                if (existingTracks.size > 0) {
+                  setRemoteVideoTracks((prev) => {
+                    const merged = new Map(prev);
+                    existingTracks.forEach((t, id) => merged.set(id, t));
+                    return merged;
+                  });
+                }
+
                 syncLiveKitParticipants(room);
               }
             }
@@ -478,7 +513,7 @@ export function useMeetingRoom({
           setError(
             err instanceof ApiError
               ? err.message
-              : "Unable to connect to meeting room. Please check meeting ID."
+              : err?.message || "Unable to connect to meeting room. Please check meeting ID."
           );
         }
       } finally {
@@ -497,56 +532,13 @@ export function useMeetingRoom({
         roomRef.current = null;
       }
     };
-  }, [meetingId, syncLiveKitParticipants]);
+  }, [meetingId]); // Strictly depends ONLY on meetingId!
 
-  // 2. Periodic Database Polling for Resilient Real-Time Participant List Synchronization
-  useEffect(() => {
-    if (!meetingId) return;
-
-    let isPolling = true;
-    const pollInterval = setInterval(async () => {
-      if (!isPolling) return;
-      try {
-        const dbParticipants = await api.getParticipants(meetingId);
-        if (isPolling && dbParticipants && dbParticipants.length > 0) {
-          const hostId = meetingRef.current?.host_id;
-          const user = configRef.current.currentUser;
-          const myId = localParticipantIdRef.current;
-
-          setParticipants((prev) => {
-            // Check if LiveKit has active remote peers connected
-            if (roomRef.current && roomRef.current.state === ConnectionState.Connected) {
-              return prev; // LiveKit manages real-time peer state directly
-            }
-
-            // Fallback DB synchronization when LiveKit is connecting/offline
-            return dbParticipants.map((dp) => {
-              const isLocal = dp.id === myId || (Boolean(user?.id) && dp.user_id === user?.id);
-              const isHost = dp.role?.toUpperCase() === "HOST" || dp.id === hostId || dp.user_id === hostId;
-              return {
-                ...dp,
-                is_host: isHost,
-                is_guest: !dp.user_id,
-                audio_muted: isLocal ? isMuted : dp.audio_muted,
-                video_muted: isLocal ? isVideoOff : dp.video_muted,
-                hand_raised: isLocal ? isHandRaisedRef.current : Boolean(remoteHandsRef.current[dp.id]),
-              };
-            });
-          });
-        }
-      } catch {}
-    }, 2500);
-
-    return () => {
-      isPolling = false;
-      clearInterval(pollInterval);
-    };
-  }, [meetingId, isMuted, isVideoOff]);
-
-  // 3. Audio Toggle
+  // Audio Toggle (Pure SFU track operation)
   const toggleMic = async () => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
+    isMutedRef.current = nextMuted;
 
     if (roomRef.current?.localParticipant) {
       try {
@@ -558,16 +550,19 @@ export function useMeetingRoom({
     syncLiveKitParticipants();
   };
 
-  // 4. Video Toggle
+  // Video Toggle (Pure SFU track operation)
   const toggleVideo = async () => {
     const nextVideoOff = !isVideoOff;
     setIsVideoOff(nextVideoOff);
+    isVideoOffRef.current = nextVideoOff;
 
     if (roomRef.current?.localParticipant) {
       try {
         await roomRef.current.localParticipant.setCameraEnabled(!nextVideoOff);
-        const pub = Array.from(roomRef.current.localParticipant.videoTrackPublications.values())[0];
-        setLocalVideoTrack(pub?.videoTrack || null);
+        const pub = Array.from(
+          roomRef.current.localParticipant.videoTrackPublications.values()
+        )[0];
+        setLocalVideoTrack(!nextVideoOff ? (pub?.videoTrack || null) : null);
       } catch (err) {
         console.warn("Failed to toggle camera track via LiveKit:", err);
       }
@@ -575,7 +570,7 @@ export function useMeetingRoom({
     syncLiveKitParticipants();
   };
 
-  // 5. Hand Raise Toggle
+  // Hand Raise Toggle
   const toggleHand = async () => {
     const nextHand = !isHandRaised;
     setIsHandRaised(nextHand);
@@ -597,7 +592,7 @@ export function useMeetingRoom({
     syncLiveKitParticipants();
   };
 
-  // 6. Send Emoji Reaction
+  // Send Emoji Reaction
   const sendReaction = async (emoji: string) => {
     const myId = localParticipantIdRef.current || roomRef.current?.localParticipant?.identity || "self";
     const reactionId = `react-${Date.now()}-${Math.random()}`;
@@ -625,7 +620,7 @@ export function useMeetingRoom({
     }
   };
 
-  // 7. Screen Share Toggle
+  // Screen Share Toggle
   const toggleScreenShare = async () => {
     if (!roomRef.current?.localParticipant) return;
     const nextShare = !isScreenSharing;
@@ -639,11 +634,11 @@ export function useMeetingRoom({
     syncLiveKitParticipants();
   };
 
-  // 8. Send In-Room Message
+  // Send In-Room Message
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
     const msgObj = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       sender: localParticipant?.display_name || configRef.current.currentUser?.display_name || "You",
       text: text.trim(),
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -666,7 +661,7 @@ export function useMeetingRoom({
     }
   };
 
-  // 9. Host Action: Mute All
+  // Host Action: Mute All
   const muteAll = async () => {
     if (roomRef.current?.localParticipant) {
       try {
@@ -679,7 +674,7 @@ export function useMeetingRoom({
     }
   };
 
-  // 10. Leave Meeting
+  // Leave Meeting
   const leaveMeeting = async () => {
     if (roomRef.current) {
       roomRef.current.disconnect();
@@ -694,7 +689,7 @@ export function useMeetingRoom({
     router.push("/");
   };
 
-  // 11. End Meeting for All
+  // End Meeting for All
   const endMeetingForAll = async () => {
     if (roomRef.current?.localParticipant) {
       try {

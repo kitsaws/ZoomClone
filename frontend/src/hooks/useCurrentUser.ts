@@ -6,7 +6,7 @@ import { api } from "@/services/api";
 
 const STORAGE_KEY = "zoom_current_user";
 
-// Fallback demo user if API hasn't loaded yet
+// Fallback demo user
 export const DEFAULT_DEMO_USER: User = {
   id: "user-swastik-1",
   email: "swastik@zoom.test",
@@ -15,37 +15,56 @@ export const DEFAULT_DEMO_USER: User = {
   pmi: "591 793 6498",
 };
 
-export function useCurrentUser() {
-  const [currentUser, setCurrentUserState] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+// Module-level in-memory cache to prevent duplicate /users network requests
+let cachedDbUsers: User[] | null = null;
+let dbUsersPromise: Promise<User[]> | null = null;
 
-  // Initialize from localStorage and validate with backend users
+function getStoredUser(): User | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function useCurrentUser() {
+  const [currentUser, setCurrentUserState] = useState<User | null>(() => getStoredUser() || DEFAULT_DEMO_USER);
+  const [isLoading, setIsLoading] = useState(() => !getStoredUser());
+
   useEffect(() => {
     let isMounted = true;
 
     async function initUser() {
       try {
-        const storedStr = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-        let candidateUser: User | null = null;
-        if (storedStr) {
-          try {
-            candidateUser = JSON.parse(storedStr);
-          } catch {}
+        const candidateUser = getStoredUser();
+
+        let dbUsers: User[] = [];
+        if (cachedDbUsers) {
+          dbUsers = cachedDbUsers;
+        } else {
+          if (!dbUsersPromise) {
+            dbUsersPromise = api.getUsers().then((res) => {
+              cachedDbUsers = res;
+              return res;
+            });
+          }
+          dbUsers = await dbUsersPromise;
         }
 
-        // Fetch valid users from backend DB
-        const dbUsers = await api.getUsers();
         if (!isMounted) return;
 
         if (dbUsers && dbUsers.length > 0) {
-          // If candidate user matches an existing DB user by email or id, use it
-          let matched = candidateUser
-            ? dbUsers.find((u) => u.id === candidateUser?.id || u.email === candidateUser?.email)
+          const matched = candidateUser
+            ? dbUsers.find((u) => u.id === candidateUser.id || u.email === candidateUser.email)
             : null;
 
           const activeUser = matched || dbUsers[0];
           setCurrentUserState(activeUser);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(activeUser));
+          if (typeof window !== "undefined") {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(activeUser));
+          }
         } else if (candidateUser) {
           setCurrentUserState(candidateUser);
         } else {
@@ -53,7 +72,8 @@ export function useCurrentUser() {
         }
       } catch (err) {
         if (isMounted) {
-          setCurrentUserState(DEFAULT_DEMO_USER);
+          const fallback = getStoredUser() || DEFAULT_DEMO_USER;
+          setCurrentUserState(fallback);
         }
       } finally {
         if (isMounted) {

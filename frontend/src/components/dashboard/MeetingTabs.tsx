@@ -301,7 +301,7 @@ export const MeetingTabs: React.FC<MeetingTabsProps> = ({
 
           {/* Screenshot 2 Dropdown Menu */}
           {isMenuOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-64 bg-surface border border-app-border rounded-2xl shadow-2xl z-50 p-2 space-y-2 animate-in fade-in zoom-in-95 text-xs">
+            <div className="absolute right-0 top-full mt-1.5 w-64 bg-surface border border-app-border rounded-2xl shadow-2xl z-[99] p-2 space-y-2 animate-in fade-in zoom-in-95 text-xs">
               {/* VIEW SECTION */}
               <div className="space-y-1">
                 <span className="text-[11px] font-semibold text-text-muted px-2.5 block">View</span>
@@ -475,7 +475,7 @@ export const MeetingTabs: React.FC<MeetingTabsProps> = ({
       )}
 
       {/* 4. MAIN SCROLLABLE CONTENT (Agenda vs. Day Planner) */}
-      <div className="p-4 sm:p-5 flex-1 min-h-0 overflow-y-auto">
+      <div className="p-4 sm:p-5 pb-20 flex-1 min-h-0 overflow-y-auto">
         {viewMode === "day" ? (
           /* Day Planner View (Screenshot 3) */
           <DayPlannerView

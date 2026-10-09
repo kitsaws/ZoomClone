@@ -16,7 +16,7 @@ import { MeetingLobbyModal } from "@/components/meeting/MeetingLobbyModal";
 import { Button } from "@/components/ui/Button";
 import { Sparkles, X, ArrowLeft } from "lucide-react";
 import { api } from "@/services/api";
-import { Meeting } from "@/types/meeting";
+import { Meeting, User } from "@/types/meeting";
 
 interface MeetingRoomProps {
   params: Promise<{ id: string }>;
@@ -24,6 +24,7 @@ interface MeetingRoomProps {
 
 interface ActiveRoomProps {
   meetingId: string;
+  currentUser: User | null;
   initialName?: string;
   initialAudioMuted: boolean;
   initialVideoOff: boolean;
@@ -32,13 +33,13 @@ interface ActiveRoomProps {
 
 function MeetingRoomContent({
   meetingId,
+  currentUser,
   initialName,
   initialAudioMuted,
   initialVideoOff,
   passcode,
 }: ActiveRoomProps) {
   const router = useRouter();
-  const { currentUser } = useCurrentUser();
 
   const {
     meeting,
@@ -297,6 +298,7 @@ function MeetingRoomContainer({ params }: MeetingRoomProps) {
   return (
     <MeetingRoomContent
       meetingId={meetingId}
+      currentUser={currentUser}
       initialName={lobbyOptions.displayName}
       initialAudioMuted={lobbyOptions.audioMuted}
       initialVideoOff={lobbyOptions.videoOff}
