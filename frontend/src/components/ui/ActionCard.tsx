@@ -24,39 +24,34 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   const isOrange = variant === "orange";
 
   return (
-    <div className={cn("flex flex-col items-center group", className)}>
-      <div className="relative">
-        <button
-          onClick={onClick}
-          className={cn(
-            "w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-white transition-all duration-200 cursor-pointer shadow-md active:scale-95",
-            isOrange
-              ? "bg-zoom-orange hover:bg-zoom-orange-hover shadow-[0_6px_16px_rgba(242,109,33,0.3)] hover:shadow-[0_8px_20px_rgba(242,109,33,0.4)]"
-              : "bg-zoom-blue hover:bg-zoom-blue-hover shadow-[0_6px_16px_rgba(45,140,255,0.25)] hover:shadow-[0_8px_20px_rgba(45,140,255,0.35)]"
-          )}
-          aria-label={title}
-        >
-          {icon}
-        </button>
+    <div className={cn("flex flex-col items-center select-none group", className)}>
+      {/* Action Button Tile */}
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "w-12 h-12 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-white transition-all duration-150 cursor-pointer shadow-sm active:scale-95",
+          isOrange
+            ? "bg-[#F26D21] hover:bg-[#E05D12] shadow-[0_4px_12px_rgba(242,109,33,0.3)]"
+            : "bg-[#0E71EB] hover:bg-[#005FE6] shadow-[0_4px_12px_rgba(14,113,235,0.25)]"
+        )}
+        aria-label={title}
+      >
+        {icon}
+      </button>
 
+      {/* Label (with optional dropdown chevron for New Meeting) */}
+      <div
+        onClick={hasDropdown ? onDropdownClick || onClick : onClick}
+        className="mt-2 flex items-center gap-1 cursor-pointer"
+      >
+        <span className="text-[11px] sm:text-xs font-medium text-[#232333] dark:text-zinc-200 group-hover:text-[#0E71EB] transition-colors text-center">
+          {title}
+        </span>
         {hasDropdown && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDropdownClick?.(e);
-            }}
-            className="absolute -bottom-1 right-1/2 translate-x-1/2 bg-surface hover:bg-surface-hover text-text-primary border border-app-border rounded-full p-0.5 transition-colors shadow-sm"
-            aria-label={`${title} options`}
-          >
-            <ChevronDown className="h-3 w-3" />
-          </button>
+          <ChevronDown className="h-3 w-3 text-[#232333] dark:text-zinc-200 group-hover:text-[#0E71EB] transition-colors -ml-0.5" />
         )}
       </div>
-
-      <span className="mt-2 text-xs font-medium text-text-primary group-hover:text-zoom-blue transition-colors text-center select-none">
-        {title}
-      </span>
     </div>
   );
-
 };

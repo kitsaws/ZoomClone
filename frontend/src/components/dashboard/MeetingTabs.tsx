@@ -202,9 +202,9 @@ export const MeetingTabs: React.FC<MeetingTabsProps> = ({
   const hasActiveFilterChips = filterHostedByYou || filterWithChat;
 
   return (
-    <div className={cn("w-full bg-surface border border-app-border rounded-3xl shadow-sm overflow-hidden flex flex-col select-none", className)}>
+    <div className={cn("w-full flex-1 min-h-0 bg-surface border border-app-border rounded-2xl shadow-sm overflow-hidden flex flex-col select-none", className)}>
       {/* 1. TOP BAR (Screenshot 1: (+) on left, centered [Today, Oct 9 v]) */}
-      <div className="px-5 py-3 border-b border-app-border/80 flex items-center justify-between bg-surface/90 backdrop-blur-sm relative">
+      <div className="px-5 py-3 border-b border-app-border flex items-center justify-between bg-surface shrink-0 relative">
         {/* Left: + Schedule Button */}
         <button
           type="button"
@@ -249,7 +249,7 @@ export const MeetingTabs: React.FC<MeetingTabsProps> = ({
       </div>
 
       {/* 2. BAR UNDER TOP BAR (Screenshot 1: Today Pill, < >, and rightmost [...] menu) */}
-      <div className="px-5 py-2.5 border-b border-app-border/60 flex items-center justify-between gap-3 bg-surface-subtle/30">
+      <div className="px-5 py-2.5 border-b border-app-border/60 flex items-center justify-between gap-3 bg-surface-subtle/30 shrink-0">
         {/* Left Controls: Today Pill + < > Day Steppers */}
         <div className="flex items-center gap-2">
           {/* Today Pill Button: bg stays consistent, icon changes to Arrow if not today */}
@@ -445,7 +445,7 @@ export const MeetingTabs: React.FC<MeetingTabsProps> = ({
 
       {/* 3. ACTIVE FILTER CHIPS BAR (Screenshot 3) */}
       {hasActiveFilterChips && (
-        <div className="px-5 py-2 border-b border-app-border/60 flex items-center gap-2 flex-wrap bg-surface-subtle/20">
+        <div className="px-5 py-2 border-b border-app-border/60 flex items-center gap-2 flex-wrap bg-surface-subtle/20 shrink-0">
           {filterHostedByYou && (
             <span className="inline-flex items-center gap-1.5 bg-surface border border-app-border rounded-xl px-2.5 py-1 text-xs font-semibold text-text-primary shadow-sm">
               <span>Hosted by you</span>
@@ -475,7 +475,7 @@ export const MeetingTabs: React.FC<MeetingTabsProps> = ({
       )}
 
       {/* 4. MAIN SCROLLABLE CONTENT (Agenda vs. Day Planner) */}
-      <div className="p-4 sm:p-5 flex-1 overflow-y-auto max-h-[560px]">
+      <div className="p-4 sm:p-5 flex-1 min-h-0 overflow-y-auto">
         {viewMode === "day" ? (
           /* Day Planner View (Screenshot 3) */
           <DayPlannerView
@@ -525,7 +525,7 @@ export const MeetingTabs: React.FC<MeetingTabsProps> = ({
         )}
       </div>
 
-      {/* 5. COPY INVITATION MODAL (Screenshot 4) */}
+      {/* 6. COPY INVITATION MODAL (Screenshot 4) */}
       <CopyInvitationModal
         isOpen={!!copyModalMeeting}
         onClose={() => setCopyModalMeeting(null)}

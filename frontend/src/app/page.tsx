@@ -3,20 +3,17 @@
 import React, { useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useMeetings } from "@/hooks/useMeetings";
+import { TopNavbar } from "@/components/dashboard/TopNavbar";
 import { SidebarNav } from "@/components/dashboard/SidebarNav";
-import { ClockWidget } from "@/components/dashboard/ClockWidget";
-import { ActionCards } from "@/components/dashboard/ActionCards";
-import { MeetingTabs } from "@/components/dashboard/MeetingTabs";
+import { MainDashboard } from "@/components/dashboard/MainDashboard";
 import { ConnectingOverlay } from "@/components/modals/ConnectingOverlay";
 import { JoinMeetingModal } from "@/components/modals/JoinMeetingModal";
 import { ScheduleMeetingModal } from "@/components/modals/ScheduleMeetingModal";
 import { CopyInvitationModal } from "@/components/modals/CopyInvitationModal";
 import { UserSwitcherModal } from "@/components/modals/UserSwitcherModal";
+import { SettingsModal } from "@/components/modals/SettingsModal";
 import { Meeting, MeetingCreatePayload } from "@/types/meeting";
 import { useRouter } from "next/navigation";
-import { Sparkles, Sun, Moon, Laptop } from "lucide-react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const router = useRouter();
@@ -30,14 +27,15 @@ export default function HomePage() {
     deleteMeeting,
   } = useMeetings();
 
-  // Modals & Overlays state
+  // Navigation & Modals state
+  const [activeNav, setActiveNav] = useState("home");
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [scheduledMeetingForInvite, setScheduledMeetingForInvite] = useState<Meeting | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingTitle, setConnectingTitle] = useState("Starting meeting...");
-
 
   // Theme State
   const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
@@ -66,11 +64,11 @@ export default function HomePage() {
         : "Instant Meeting";
       const newMeeting = await createInstantMeeting(meetingTopic);
 
-      // Short aesthetic delay to let the user see the Zoom pulse spinner
+      // Short delay for the authentic Zoom pulse connection effect
       setTimeout(() => {
         setIsConnecting(false);
         router.push(`/meeting/${newMeeting.id}`);
-      }, 700);
+      }, 600);
     } catch (e: any) {
       setIsConnecting(false);
       alert(e?.message || "Failed to launch instant meeting.");
@@ -85,117 +83,38 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-text-primary flex flex-row antialiased transition-colors duration-200">
-      {/* Left Vertical Sidebar Navigation */}
-      <SidebarNav
+    <div className="h-screen w-screen overflow-hidden bg-[#EBEFF2] dark:bg-[#11131B] text-text-primary flex flex-col antialiased select-none font-sans transition-colors duration-200">
+      {/* 1. Full-Width Top Navbar */}
+      <TopNavbar
         currentUser={currentUser}
         onOpenUserSwitcher={() => setIsUserSwitcherOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col justify-between overflow-y-auto max-h-screen">
-        {/* Top Navbar */}
-        <header className="border-b border-app-border px-5 py-3 flex items-center justify-between bg-surface/80 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold tracking-tight text-text-primary">
-              Zoom Workplace Dashboard
-            </span>
-          </div>
+      {/* 2. Main Body: Sidebar + Floating White Dashboard */}
+      <div className="flex-1 flex flex-row min-h-0 overflow-hidden gap-0">
+        {/* Left Vertical Sidebar Navigation */}
+        <SidebarNav
+          currentUser={currentUser}
+          activeNav={activeNav}
+          onSelectNav={setActiveNav}
+          onOpenUserSwitcher={() => setIsUserSwitcherOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
 
-          <div className="flex items-center gap-2.5">
-            {/* Theme Toggle Pill */}
-            <div className="bg-surface-subtle border border-app-border rounded-xl p-0.5 flex items-center shadow-inner">
-              <button
-                onClick={() => toggleTheme("light")}
-                className={cn(
-                  "p-1 rounded-lg text-xs transition-all cursor-pointer",
-                  theme === "light" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
-                )}
-                title="Light Mode"
-              >
-                <Sun className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => toggleTheme("dark")}
-                className={cn(
-                  "p-1 rounded-lg text-xs transition-all cursor-pointer",
-                  theme === "dark" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
-                )}
-                title="Dark Mode"
-              >
-                <Moon className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => toggleTheme("system")}
-                className={cn(
-                  "p-1 rounded-lg text-xs transition-all cursor-pointer",
-                  theme === "system" ? "bg-surface text-zoom-blue shadow-sm" : "text-text-muted hover:text-text-primary"
-                )}
-                title="System Mode"
-              >
-                <Laptop className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {/* Component Gallery Link */}
-            <Link
-              href="/components"
-              className="text-xs font-semibold bg-surface border border-app-border px-2.5 py-1 rounded-xl hover:text-zoom-blue transition-colors flex items-center gap-1.5 shadow-sm"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-zoom-blue" />
-              <span className="hidden sm:inline">UI Gallery</span>
-            </Link>
-          </div>
-        </header>
-
-        {/* Dashboard Center Container */}
-        <div className="max-w-4xl mx-auto w-full px-5 py-6 space-y-5 flex-1">
-          {/* Real-time Clock Widget & User Greeting */}
-          <ClockWidget userName={currentUser?.display_name} />
-
-          {/* 4 Hero Action Tiles (Official SVGs) */}
-          <ActionCards
-            onNewMeeting={handleInstantMeeting}
-            onJoin={() => setIsJoinModalOpen(true)}
-            onSchedule={() => setIsScheduleModalOpen(true)}
-            onShareScreen={() => setIsJoinModalOpen(true)}
-          />
-
-          {/* Tabbed Meetings Feeds (Upcoming, Live Rooms, Past History) */}
-          <MeetingTabs
-            upcomingMeetings={upcomingMeetings}
-            activeMeetings={activeMeetings}
-            recentMeetings={recentMeetings}
-            currentUserId={currentUser?.id}
-            currentUserName={currentUser?.display_name || "Host"}
-            onOpenSchedule={() => setIsScheduleModalOpen(true)}
-            onOpenNewMeeting={handleInstantMeeting}
-            onDeleteMeeting={deleteMeeting}
-          />
-        </div>
-
-        {/* Bottom Footer */}
-        <footer className="border-t border-app-border py-3 px-5 text-center text-xs text-text-muted max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>© 2026 Zoom Workplace Clone. Built with Next.js &amp; FastAPI.</span>
-          <div className="flex items-center gap-3 text-[11px]">
-            <Link href="/components" className="hover:text-text-primary underline">
-              Component Showcase
-            </Link>
-            <Link href="/signin" className="hover:text-text-primary underline">
-              Persona Sign In
-            </Link>
-            <a
-              href="http://localhost:8000/docs"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-text-primary underline"
-            >
-              Swagger REST Docs
-            </a>
-          </div>
-        </footer>
-
-      </main>
+        {/* Floating White Main Dashboard Entity */}
+        <MainDashboard
+          upcomingMeetings={upcomingMeetings}
+          activeMeetings={activeMeetings}
+          recentMeetings={recentMeetings}
+          currentUserId={currentUser?.id}
+          currentUserName={currentUser?.display_name || "Host"}
+          onOpenSchedule={() => setIsScheduleModalOpen(true)}
+          onOpenNewMeeting={handleInstantMeeting}
+          onOpenJoin={() => setIsJoinModalOpen(true)}
+          onOpenShareScreen={() => setIsJoinModalOpen(true)}
+          onDeleteMeeting={deleteMeeting}
+        />
+      </div>
 
       {/* MODALS */}
       {/* 1. Zoom Loading Spinner Overlay */}
@@ -205,7 +124,7 @@ export default function HomePage() {
         subtitle="Connecting you to your secure room..."
       />
 
-      {/* 2. Official Screenshot-Aligned Join Meeting Modal */}
+      {/* 2. Join Meeting Modal */}
       <JoinMeetingModal
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
@@ -220,7 +139,7 @@ export default function HomePage() {
         defaultTopic={currentUser ? `${currentUser.display_name}'s Sync` : "Team Sync"}
       />
 
-      {/* 4. Copy Invitation Modal (Triggered on Schedule Save) */}
+      {/* 4. Copy Invitation Modal */}
       <CopyInvitationModal
         isOpen={!!scheduledMeetingForInvite}
         onClose={() => setScheduledMeetingForInvite(null)}
@@ -228,7 +147,7 @@ export default function HomePage() {
         hostName={currentUser?.display_name || "Host"}
       />
 
-      {/* 5. Multi-Persona Fast Switcher Modal */}
+      {/* 5. Fast User Switcher Modal */}
       <UserSwitcherModal
         isOpen={isUserSwitcherOpen}
         onClose={() => setIsUserSwitcherOpen(false)}
@@ -236,7 +155,15 @@ export default function HomePage() {
         onSelectUser={switchUser}
         onSignOut={logout}
       />
+
+      {/* 6. Settings Modal (Theme & Persona) */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        currentUser={currentUser}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
     </div>
   );
 }
-
