@@ -4,14 +4,12 @@ import React, { useState } from "react";
 import { Meeting, MeetingParticipant } from "@/types/meeting";
 import { ViewMode } from "@/hooks/useMeetingRoom";
 import { MeetingInfoPopover } from "./MeetingInfoPopover";
+import { ZoomLogo } from "@/components/ui/ZoomLogo";
 import {
-  Video,
   Info,
   ChevronDown,
-  Clock,
   User,
   LayoutGrid,
-  Grid3X3,
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,7 +20,7 @@ export interface MeetingHeaderProps {
   isHost: boolean;
   viewMode: ViewMode;
   onSelectViewMode: (mode: ViewMode) => void;
-  elapsedSeconds: number;
+  elapsedSeconds?: number;
   isInfoPopoverOpen: boolean;
   onToggleInfoPopover: () => void;
   onOpenHostTools: () => void;
@@ -35,24 +33,12 @@ export const MeetingHeader: React.FC<MeetingHeaderProps> = ({
   isHost,
   viewMode,
   onSelectViewMode,
-  elapsedSeconds,
   isInfoPopoverOpen,
   onToggleInfoPopover,
   onOpenHostTools,
   className,
 }) => {
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
-
-  // Format timer MM:SS or HH:MM:SS
-  const formatTimer = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (hrs > 0) {
-      return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-    }
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const hostName = (meeting as any).host?.display_name || "Host";
   const titleText = meeting.topic || meeting.title || `${hostName}'s Zoom Meeting`;
@@ -67,14 +53,7 @@ export const MeetingHeader: React.FC<MeetingHeaderProps> = ({
       {/* Left Section: Logo & Info Pill */}
       <div className="flex items-center gap-3">
         {/* Leftmost: Zoom Workplace Brand */}
-        <div className="flex items-center gap-1.5 cursor-default">
-          <div className="h-6 w-6 bg-zoom-blue text-white rounded-lg flex items-center justify-center shadow-sm">
-            <Video className="h-3.5 w-3.5" />
-          </div>
-          <span className="text-[11px] font-black tracking-tight text-white font-wordmark hidden sm:inline">
-            zoom
-          </span>
-        </div>
+        <ZoomLogo variant="white" showWordmark={true} className="cursor-default" />
 
         {/* Divider */}
         <div className="h-4 w-px bg-[#36364A]" />
@@ -106,13 +85,7 @@ export const MeetingHeader: React.FC<MeetingHeaderProps> = ({
         onOpenHostTools={onOpenHostTools}
       />
 
-      {/* Center Section: Live Duration Timer */}
-      <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-zinc-300 bg-[#232333]/90 px-3 py-1 rounded-lg border border-[#36364A]">
-        <Clock className="h-3 w-3 text-zoom-blue animate-pulse" />
-        <span>{formatTimer(elapsedSeconds)}</span>
-      </div>
-
-      {/* Right Section: View Layout Switcher */}
+      {/* Right Section: View Layout Switcher (Speaker & Gallery only) */}
       <div className="relative">
         <button
           onClick={() => setIsViewMenuOpen(!isViewMenuOpen)}
@@ -123,13 +96,11 @@ export const MeetingHeader: React.FC<MeetingHeaderProps> = ({
         >
           {viewMode === "speaker" ? (
             <User className="h-3.5 w-3.5 text-zoom-blue" />
-          ) : viewMode === "dynamic" ? (
-            <LayoutGrid className="h-3.5 w-3.5 text-zoom-blue" />
           ) : (
-            <Grid3X3 className="h-3.5 w-3.5 text-zoom-blue" />
+            <LayoutGrid className="h-3.5 w-3.5 text-zoom-blue" />
           )}
           <span className="capitalize hidden sm:inline">
-            {viewMode === "dynamic" ? "Dynamic Gallery" : `${viewMode} View`}
+            {viewMode === "speaker" ? "Speaker View" : "Gallery View"}
           </span>
           <ChevronDown className="h-3 w-3 text-zinc-400" />
         </button>
@@ -141,51 +112,7 @@ export const MeetingHeader: React.FC<MeetingHeaderProps> = ({
               className="fixed inset-0 z-40"
               onClick={() => setIsViewMenuOpen(false)}
             />
-            <div className="absolute right-0 top-11 z-50 w-52 bg-surface border border-app-border rounded-xl shadow-2xl p-1.5 text-text-primary animate-in fade-in zoom-in-95 duration-150">
-              <button
-                onClick={() => {
-                  onSelectViewMode("speaker");
-                  setIsViewMenuOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left",
-                  viewMode === "speaker"
-                    ? "bg-surface-hover text-zoom-blue font-bold"
-                    : "hover:bg-surface-subtle text-text-primary"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-zoom-blue" />
-                  <div>
-                    <p className="font-semibold">Speaker View</p>
-                    <p className="text-[10px] text-text-muted">Spotlight active speaker</p>
-                  </div>
-                </div>
-                {viewMode === "speaker" && <Check className="h-3.5 w-3.5 text-zoom-blue" />}
-              </button>
-
-              <button
-                onClick={() => {
-                  onSelectViewMode("dynamic");
-                  setIsViewMenuOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left",
-                  viewMode === "dynamic"
-                    ? "bg-surface-hover text-zoom-blue font-bold"
-                    : "hover:bg-surface-subtle text-text-primary"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <LayoutGrid className="h-4 w-4 text-zoom-blue" />
-                  <div>
-                    <p className="font-semibold">Dynamic Gallery</p>
-                    <p className="text-[10px] text-text-muted">Auto-split 2-4 users</p>
-                  </div>
-                </div>
-                {viewMode === "dynamic" && <Check className="h-3.5 w-3.5 text-zoom-blue" />}
-              </button>
-
+            <div className="absolute right-0 top-11 z-50 w-52 bg-[#1F1F2C] border border-[#36364A] rounded-xl shadow-2xl p-1.5 text-white animate-in fade-in zoom-in-95 duration-150">
               <button
                 onClick={() => {
                   onSelectViewMode("gallery");
@@ -194,18 +121,40 @@ export const MeetingHeader: React.FC<MeetingHeaderProps> = ({
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left",
                   viewMode === "gallery"
-                    ? "bg-surface-hover text-zoom-blue font-bold"
-                    : "hover:bg-surface-subtle text-text-primary"
+                    ? "bg-[#2C2C3E] text-zoom-blue font-bold"
+                    : "hover:bg-[#282838] text-zinc-200"
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <Grid3X3 className="h-4 w-4 text-zoom-blue" />
+                  <LayoutGrid className="h-4 w-4 text-zoom-blue" />
                   <div>
                     <p className="font-semibold">Gallery View</p>
-                    <p className="text-[10px] text-text-muted">Uniform paginated grid</p>
+                    <p className="text-[10px] text-zinc-400">Multi-participant grid</p>
                   </div>
                 </div>
                 {viewMode === "gallery" && <Check className="h-3.5 w-3.5 text-zoom-blue" />}
+              </button>
+
+              <button
+                onClick={() => {
+                  onSelectViewMode("speaker");
+                  setIsViewMenuOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left",
+                  viewMode === "speaker"
+                    ? "bg-[#2C2C3E] text-zoom-blue font-bold"
+                    : "hover:bg-[#282838] text-zinc-200"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-zoom-blue" />
+                  <div>
+                    <p className="font-semibold">Speaker View</p>
+                    <p className="text-[10px] text-zinc-400">Spotlight active speaker</p>
+                  </div>
+                </div>
+                {viewMode === "speaker" && <Check className="h-3.5 w-3.5 text-zoom-blue" />}
               </button>
             </div>
           </>

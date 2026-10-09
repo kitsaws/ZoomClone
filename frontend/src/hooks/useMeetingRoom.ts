@@ -16,7 +16,7 @@ import {
   Participant,
 } from "livekit-client";
 
-export type ViewMode = "speaker" | "dynamic" | "gallery";
+export type ViewMode = "gallery" | "speaker";
 export type DrawerType = "participants" | "chat" | "host-tools" | null;
 
 export interface ReactionItem {
@@ -85,7 +85,7 @@ export function useMeetingRoom({
   isHandRaisedRef.current = isHandRaised;
 
   // View & UI Navigation State
-  const [viewMode, setViewMode] = useState<ViewMode>("dynamic");
+  const [viewMode, setViewMode] = useState<ViewMode>("gallery");
   const [activeDrawer, setActiveDrawer] = useState<DrawerType>(null);
   const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState<boolean>(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState<boolean>(false);

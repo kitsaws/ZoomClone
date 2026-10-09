@@ -2,8 +2,7 @@
 
 import React, { useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Avatar } from "./Avatar";
-import { Mic, MicOff, Hand, Pin } from "lucide-react";
+import { Mic, MicOff, Hand, Pin, MoreHorizontal } from "lucide-react";
 
 export interface VideoTileProps {
   name: string;
@@ -18,6 +17,26 @@ export interface VideoTileProps {
   avatarUrl?: string | null;
   videoTrack?: any;
   reactions?: string[];
+  isThumbnail?: boolean;
+}
+
+// Generate consistent background color based on name
+const AVATAR_COLORS = [
+  "bg-amber-600",
+  "bg-orange-600",
+  "bg-emerald-600",
+  "bg-blue-600",
+  "bg-indigo-600",
+  "bg-purple-600",
+  "bg-rose-600",
+];
+
+function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 export const VideoTile: React.FC<VideoTileProps> = ({
@@ -33,6 +52,7 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   avatarUrl,
   videoTrack,
   reactions = [],
+  isThumbnail = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -56,14 +76,16 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   }, [videoTrack, isVideoMuted]);
 
   const showVideo = !isVideoMuted && Boolean(videoTrack);
+  const initial = (name || "U").trim().charAt(0).toUpperCase();
+  const avatarBg = getAvatarColor(name);
 
   return (
     <div
       className={cn(
-        "relative w-full aspect-video bg-[#12121A] rounded-2xl overflow-hidden border transition-all duration-200 flex items-center justify-center select-none shadow-lg",
+        "relative w-full h-full bg-[#111116] rounded-xl overflow-hidden transition-all duration-150 flex items-center justify-center select-none group",
         isSpeaking
-          ? "border-emerald-500 ring-2 ring-emerald-500/50 shadow-[0_0_15px_rgba(40,167,69,0.3)]"
-          : "border-[#2C2C3E] hover:border-[#36364A]",
+          ? "border-2 border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-1 ring-emerald-500/50"
+          : "border border-transparent",
         className
       )}
     >
@@ -80,34 +102,64 @@ export const VideoTile: React.FC<VideoTileProps> = ({
           )}
         />
       ) : (
-        <div className="w-full h-full bg-[#161622] flex items-center justify-center relative">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(45,140,255,0.08),transparent_70%)]" />
-          <Avatar name={name} src={avatarUrl} size="xl" />
+        <div className="w-full h-full bg-[#111118] flex items-center justify-center relative">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={name}
+              className={cn(
+                "rounded-2xl object-cover shadow-md",
+                isThumbnail ? "w-10 h-10" : "w-18 h-18 sm:w-24 sm:h-24"
+              )}
+            />
+          ) : (
+            <div
+              className={cn(
+                "text-white font-bold flex items-center justify-center rounded-2xl shadow-lg",
+                avatarBg,
+                isThumbnail
+                  ? "w-9 h-9 text-base"
+                  : "w-16 h-16 sm:w-22 sm:h-22 text-2xl sm:text-3xl"
+              )}
+            >
+              {initial}
+            </div>
+          )}
         </div>
       )}
 
       {/* Top Left: Pin Indicator */}
       {isPinned && (
-        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md rounded-lg p-1.5 text-white border border-white/10">
-          <Pin className="h-3.5 w-3.5" />
+        <div className="absolute top-2.5 left-2.5 bg-black/60 backdrop-blur-md rounded-md p-1 text-white">
+          <Pin className="h-3 w-3" />
         </div>
       )}
 
+      {/* Top Right: Hover Actions ("Mute ...") */}
+      <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+        <div className="bg-black/70 backdrop-blur-md text-white text-[11px] px-2 py-0.5 rounded cursor-pointer hover:bg-black/90">
+          {isSelf ? "Mute" : "Ask to unmute"}
+        </div>
+        <div className="bg-black/70 backdrop-blur-md text-white p-1 rounded cursor-pointer hover:bg-black/90">
+          <MoreHorizontal className="h-3 w-3" />
+        </div>
+      </div>
+
       {/* Top Right: Hand Raised Alert */}
       {isHandRaised && (
-        <div className="absolute top-3 right-3 bg-amber-500 text-black font-bold text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-md animate-bounce">
+        <div className="absolute top-2.5 right-2.5 bg-amber-500 text-black font-bold text-xs px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-md animate-bounce">
           <Hand className="h-3.5 w-3.5" />
-          <span>Hand Raised</span>
+          {!isThumbnail && <span>Hand Raised</span>}
         </div>
       )}
 
       {/* Floating Reactions Overlay */}
       {reactions.length > 0 && (
-        <div className="absolute bottom-12 right-4 flex flex-col gap-1.5 pointer-events-none z-20">
+        <div className="absolute bottom-10 right-3 flex flex-col gap-1 pointer-events-none z-20">
           {reactions.map((emoji, i) => (
             <div
               key={i}
-              className="text-2xl sm:text-3xl animate-bounce drop-shadow-md bg-black/40 backdrop-blur-sm rounded-full p-1.5 border border-white/10 flex items-center justify-center"
+              className="text-2xl animate-bounce drop-shadow bg-black/40 backdrop-blur-sm rounded-full p-1 flex items-center justify-center"
             >
               {emoji}
             </div>
@@ -115,36 +167,28 @@ export const VideoTile: React.FC<VideoTileProps> = ({
         </div>
       )}
 
-      {/* Bottom Info Bar: Name & Mic Status */}
-      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 max-w-[80%]">
-          <span className="text-xs font-semibold text-white truncate">
+      {/* Bottom Left: Name & Mic Status Pill (Zoom style) */}
+      <div className="absolute bottom-2 left-2 flex items-center pointer-events-none z-10 max-w-[90%]">
+        <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded text-white text-[11px] font-medium truncate">
+          {/* Mic Status Icon */}
+          {isAudioMuted ? (
+            <MicOff className="h-3 w-3 text-rose-500 shrink-0" />
+          ) : isSpeaking ? (
+            <Mic className="h-3 w-3 text-emerald-400 shrink-0 animate-pulse" />
+          ) : (
+            <Mic className="h-3 w-3 text-white shrink-0" />
+          )}
+
+          <span className="truncate">
             {isSelf && !name.toLowerCase().includes("(you)") && name !== "You"
               ? `${name} (You)`
               : name}
           </span>
+
           {isHost && (
-            <span className="text-[10px] bg-zoom-blue text-white font-bold px-1.5 py-0.2 rounded shrink-0">
+            <span className="text-[9px] bg-zoom-blue text-white px-1 py-0.2 rounded font-bold shrink-0">
               Host
             </span>
-          )}
-        </div>
-
-        {/* Audio Status Icon */}
-        <div
-          className={cn(
-            "p-1.5 rounded-lg backdrop-blur-md border border-white/10",
-            isAudioMuted
-              ? "bg-rose-600 text-white"
-              : isSpeaking
-              ? "bg-emerald-500 text-white animate-pulse"
-              : "bg-black/60 text-white"
-          )}
-        >
-          {isAudioMuted ? (
-            <MicOff className="h-3.5 w-3.5" />
-          ) : (
-            <Mic className="h-3.5 w-3.5" />
           )}
         </div>
       </div>

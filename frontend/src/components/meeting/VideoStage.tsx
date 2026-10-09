@@ -1,11 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { MeetingParticipant } from "@/types/meeting";
 import { ViewMode, ReactionItem } from "@/hooks/useMeetingRoom";
 import { VideoTile } from "@/components/ui/VideoTile";
-import { Button } from "@/components/ui/Button";
-import { Users, Copy, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Track } from "livekit-client";
 
@@ -25,6 +24,19 @@ export interface VideoStageProps {
   activeReactions?: ReactionItem[];
 }
 
+interface ParticipantEntry {
+  id: string;
+  displayName: string;
+  isSelf: boolean;
+  isHost: boolean;
+  isAudioMuted: boolean;
+  isVideoMuted: boolean;
+  isHandRaised: boolean;
+  isSpeaking: boolean;
+  videoTrack?: Track | null;
+  reactions: string[];
+}
+
 export const VideoStage: React.FC<VideoStageProps> = ({
   localParticipant,
   remoteParticipants,
@@ -40,171 +52,299 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   speakingParticipantIds,
   activeReactions = [],
 }) => {
-  const [copied, setCopied] = React.useState(false);
+  // Gallery view pagination state (16 per page)
+  const [galleryPage, setGalleryPage] = useState(0);
 
-  const totalCount = 1 + remoteParticipants.length;
+  // Speaker view top strip pagination state (4 per page)
+  const [speakerStripPage, setSpeakerStripPage] = useState(0);
 
-  const handleCopyLink = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(`${window.location.origin}/meeting/${meetingId}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+  // Speaker view active spotlighted participant ID
+  const [spotlightParticipantId, setSpotlightParticipantId] = useState<string | null>(null);
 
-  const isLocalSpeaking =
-    !isMuted &&
-    Boolean(
-      localParticipant?.id && speakingParticipantIds?.has(localParticipant.id)
-    );
+  // Build unified list of all participants in room
+  const allParticipants: ParticipantEntry[] = useMemo(() => {
+    const list: ParticipantEntry[] = [];
 
-  // Self Reactions
-  const selfReactions = activeReactions
-    .filter(
-      (r) =>
-        r.participantId === localParticipant?.id ||
-        r.participantId === "self" ||
-        r.participantId === localParticipant?.user_id
-    )
-    .map((r) => r.emoji);
-
-  // Self Tile Component
-  const renderSelfTile = (isSpotlight = false) => (
-    <VideoTile
-      key="local-user-tile"
-      name={localParticipant?.display_name || "You"}
-      isHost={isHost}
-      isSelf={true}
-      isSpeaking={isLocalSpeaking}
-      isAudioMuted={isMuted}
-      isVideoMuted={isVideoOff}
-      isHandRaised={isHandRaised}
-      videoTrack={localVideoTrack}
-      reactions={selfReactions}
-      className={cn("h-full w-full", isSpotlight && "max-h-[75vh]")}
-    />
-  );
-
-  // Remote Participant Tile Component
-  const renderRemoteTile = (p: MeetingParticipant, isSpotlight = false) => {
-    const isAudioMuted = p.audio_muted ?? p.is_audio_muted ?? true;
-    const isVideoMuted = p.video_muted ?? p.is_video_off ?? false;
-    const track = remoteVideoTracks?.get(p.id);
-    const isSpeaking =
-      !isAudioMuted && Boolean(speakingParticipantIds?.has(p.id));
-    const remoteReactions = activeReactions
-      .filter((r) => r.participantId === p.id || (p.user_id && r.participantId === p.user_id))
+    // 1. Local User
+    const localId = localParticipant?.id || "local-user";
+    const isLocalSpeaking =
+      !isMuted && Boolean(localId && speakingParticipantIds?.has(localId));
+    const selfReactions = activeReactions
+      .filter(
+        (r) =>
+          r.participantId === localId ||
+          r.participantId === "self" ||
+          r.participantId === localParticipant?.user_id
+      )
       .map((r) => r.emoji);
 
-    return (
-      <VideoTile
-        key={p.id}
-        name={p.display_name}
-        isHost={p.role?.toUpperCase() === "HOST"}
-        isSelf={false}
-        isSpeaking={isSpeaking}
-        isAudioMuted={isAudioMuted}
-        isVideoMuted={isVideoMuted}
-        isHandRaised={p.hand_raised ?? p.is_hand_raised ?? false}
-        videoTrack={track}
-        reactions={remoteReactions}
-        className={cn("h-full w-full", isSpotlight && "max-h-[75vh]")}
-      />
-    );
-  };
+    list.push({
+      id: localId,
+      displayName: localParticipant?.display_name || "You",
+      isSelf: true,
+      isHost: isHost,
+      isAudioMuted: isMuted,
+      isVideoMuted: isVideoOff,
+      isHandRaised: isHandRaised,
+      isSpeaking: isLocalSpeaking,
+      videoTrack: localVideoTrack,
+      reactions: selfReactions,
+    });
+
+    // 2. Remote Participants
+    remoteParticipants.forEach((p) => {
+      const isAudioMuted = p.audio_muted ?? p.is_audio_muted ?? true;
+      const isVideoMuted = p.video_muted ?? p.is_video_off ?? false;
+      const track = remoteVideoTracks?.get(p.id);
+      const isSpeaking = !isAudioMuted && Boolean(speakingParticipantIds?.has(p.id));
+      const remoteReactions = activeReactions
+        .filter(
+          (r) =>
+            r.participantId === p.id ||
+            (p.user_id && r.participantId === p.user_id)
+        )
+        .map((r) => r.emoji);
+
+      list.push({
+        id: p.id,
+        displayName: p.display_name,
+        isSelf: false,
+        isHost: p.role?.toUpperCase() === "HOST",
+        isAudioMuted: isAudioMuted,
+        isVideoMuted: isVideoMuted,
+        isHandRaised: p.hand_raised ?? p.is_hand_raised ?? false,
+        isSpeaking: isSpeaking,
+        videoTrack: track,
+        reactions: remoteReactions,
+      });
+    });
+
+    return list;
+  }, [
+    localParticipant,
+    remoteParticipants,
+    isMuted,
+    isVideoOff,
+    isHandRaised,
+    isHost,
+    localVideoTrack,
+    remoteVideoTracks,
+    speakingParticipantIds,
+    activeReactions,
+  ]);
+
+  const totalCount = allParticipants.length;
+
+  // Track dynamic active speaker
+  useEffect(() => {
+    if (speakingParticipantIds && speakingParticipantIds.size > 0) {
+      const activeId = Array.from(speakingParticipantIds)[0];
+      if (activeId) {
+        setSpotlightParticipantId(activeId);
+      }
+    }
+  }, [speakingParticipantIds]);
+
+  // Reset page bounds when participant count changes
+  useEffect(() => {
+    const maxGalleryPage = Math.max(0, Math.ceil(totalCount / 16) - 1);
+    if (galleryPage > maxGalleryPage) {
+      setGalleryPage(maxGalleryPage);
+    }
+
+    const maxStripPage = Math.max(0, Math.ceil(totalCount / 4) - 1);
+    if (speakerStripPage > maxStripPage) {
+      setSpeakerStripPage(maxStripPage);
+    }
+  }, [totalCount, galleryPage, speakerStripPage]);
+
+  // Determine current active speaker for Speaker View spotlight
+  const currentSpeaker: ParticipantEntry = useMemo(() => {
+    if (spotlightParticipantId) {
+      const found = allParticipants.find((p) => p.id === spotlightParticipantId);
+      if (found) return found;
+    }
+    // Fallback to first speaking participant
+    const speaking = allParticipants.find((p) => p.isSpeaking);
+    if (speaking) return speaking;
+    // Fallback to first remote participant
+    if (allParticipants.length > 1) return allParticipants[1];
+    // Fallback to local
+    return allParticipants[0];
+  }, [allParticipants, spotlightParticipantId]);
+
+  // Helper renderer for a participant tile
+  const renderParticipantTile = (entry: ParticipantEntry, isThumbnail = false) => (
+    <VideoTile
+      key={entry.id}
+      name={entry.displayName}
+      isHost={entry.isHost}
+      isSelf={entry.isSelf}
+      isSpeaking={entry.isSpeaking}
+      isAudioMuted={entry.isAudioMuted}
+      isVideoMuted={entry.isVideoMuted}
+      isHandRaised={entry.isHandRaised}
+      videoTrack={entry.videoTrack}
+      reactions={entry.reactions}
+      isThumbnail={isThumbnail}
+    />
+  );
 
   return (
     <main
       className={cn(
-        "flex-1 p-3 sm:p-5 flex items-center justify-center overflow-hidden relative bg-black",
+        "flex-1 p-3 sm:p-4 flex items-center justify-center overflow-hidden relative bg-black select-none",
         className
       )}
     >
-      {/* CASE 1: SPEAKER VIEW */}
-      {viewMode === "speaker" && (
-        <div className="w-full h-full max-w-6xl flex flex-col gap-3 justify-center">
-          {/* Top/Side Strip for other participants if > 1 */}
-          {remoteParticipants.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 max-h-32 shrink-0 justify-center">
-              <div className="w-40 h-24 shrink-0">
-                {renderSelfTile(false)}
-              </div>
-              {remoteParticipants.slice(1).map((p) => (
-                <div key={p.id} className="w-40 h-24 shrink-0">
-                  {renderRemoteTile(p, false)}
-                </div>
-              ))}
-            </div>
-          )}
+      {/* ========================================================
+          CASE 1: GALLERY VIEW
+          ======================================================== */}
+      {viewMode === "gallery" && (() => {
+        const PAGE_SIZE = 16;
+        const totalGalleryPages = Math.ceil(totalCount / PAGE_SIZE);
+        const startIndex = galleryPage * PAGE_SIZE;
+        const visibleParticipants = allParticipants.slice(
+          startIndex,
+          startIndex + PAGE_SIZE
+        );
+        const visibleCount = visibleParticipants.length;
 
-          {/* Main Spotlight Speaker */}
-          <div className="flex-1 w-full max-h-[78vh] flex items-center justify-center">
-            {remoteParticipants.length > 0
-              ? renderRemoteTile(remoteParticipants[0], true)
-              : renderSelfTile(true)}
-          </div>
-        </div>
-      )}
-
-      {/* CASE 2: DYNAMIC GALLERY (2 Users 50/50, 3-4 Users 2x2 Grid) */}
-      {viewMode === "dynamic" && (
-        <div
-          className={cn(
-            "w-full h-full max-w-6xl max-h-[82vh] grid gap-3 items-center justify-center",
-            totalCount === 1
-              ? "grid-cols-1"
-              : totalCount === 2
-              ? "grid-cols-1 md:grid-cols-2"
-              : "grid-cols-1 sm:grid-cols-2"
-          )}
-        >
-          {renderSelfTile()}
-          {remoteParticipants.map((p) => renderRemoteTile(p))}
-
-          {/* If alone in room, show waiting buddy card */}
-          {totalCount === 1 && (
-            <div className="hidden sm:flex border border-dashed border-[#36364A] rounded-2xl h-full min-h-[220px] max-h-[80vh] flex-col items-center justify-center p-6 text-center space-y-2.5 bg-[#161622]/60">
-              <div className="h-10 w-10 rounded-full bg-zoom-blue/20 text-zoom-blue flex items-center justify-center">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-zinc-200">
-                  Waiting for others to join...
-                </p>
-                <p className="text-[11px] text-zinc-400 mt-0.5">
-                  Share the meeting link to start collaborating.
-                </p>
-              </div>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleCopyLink}
-                leftIcon={copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                className="rounded-xl px-3 text-xs"
+        return (
+          <div className="w-full h-full max-w-7xl flex items-center justify-center relative">
+            {/* Left Page Button if Paginated */}
+            {totalGalleryPages > 1 && galleryPage > 0 && (
+              <button
+                type="button"
+                onClick={() => setGalleryPage((p) => Math.max(0, p - 1))}
+                className="absolute left-2 z-20 p-2 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/15 transition-all shadow-lg cursor-pointer"
+                title="Previous Page"
               >
-                {copied ? "Link Copied!" : "Copy Invite Link"}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            )}
 
-      {/* CASE 3: GALLERY VIEW (Uniform Grid for 5+ Participants) */}
-      {viewMode === "gallery" && (
-        <div
-          className={cn(
-            "w-full h-full max-w-6xl max-h-[82vh] grid gap-3 items-center justify-center",
-            totalCount <= 2
-              ? "grid-cols-1 sm:grid-cols-2"
-              : totalCount <= 4
-              ? "grid-cols-2"
-              : "grid-cols-2 sm:grid-cols-3 md:grid-cols-3"
-          )}
-        >
-          {renderSelfTile()}
-          {remoteParticipants.map((p) => renderRemoteTile(p))}
-        </div>
-      )}
+            {/* Gallery Grid Matrix */}
+            <div
+              className={cn(
+                "w-full h-full max-h-[84vh] gap-2.5 sm:gap-3.5 items-center justify-center",
+                // 1 User: Full Stage
+                visibleCount === 1 && "flex w-full h-full",
+                // 2 Users: 2 Columns, Full Height (side-by-side)
+                visibleCount === 2 && "grid grid-cols-1 md:grid-cols-2 grid-rows-1 h-full",
+                // 3 to 4 Users: 2 Columns x 2 Rows (at most 2 per row)
+                visibleCount >= 3 && visibleCount <= 4 && "grid grid-cols-1 sm:grid-cols-2 grid-rows-2 h-full",
+                // 5 to 6 Users: 3 Columns x 2 Rows
+                visibleCount >= 5 && visibleCount <= 6 && "grid grid-cols-2 sm:grid-cols-3 grid-rows-2 h-full",
+                // 7 to 9 Users: 3 Columns x 3 Rows
+                visibleCount >= 7 && visibleCount <= 9 && "grid grid-cols-2 sm:grid-cols-3 grid-rows-3 h-full",
+                // 10 to 16 Users: 4 Columns x 4 Rows
+                visibleCount >= 10 && "grid grid-cols-2 sm:grid-cols-4 grid-rows-4 h-full"
+              )}
+            >
+              {visibleParticipants.map((p) => renderParticipantTile(p))}
+            </div>
+
+            {/* Right Page Button if Paginated */}
+            {totalGalleryPages > 1 && galleryPage < totalGalleryPages - 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setGalleryPage((p) => Math.min(totalGalleryPages - 1, p + 1))
+                }
+                className="absolute right-2 z-20 p-2 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/15 transition-all shadow-lg cursor-pointer"
+                title="Next Page"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ========================================================
+          CASE 2: SPEAKER VIEW
+          ======================================================== */}
+      {viewMode === "speaker" && (() => {
+        const STRIP_PAGE_SIZE = 4;
+        const totalStripPages = Math.ceil(totalCount / STRIP_PAGE_SIZE);
+        const stripStartIndex = speakerStripPage * STRIP_PAGE_SIZE;
+        const visibleStripParticipants = allParticipants.slice(
+          stripStartIndex,
+          stripStartIndex + STRIP_PAGE_SIZE
+        );
+
+        return (
+          <div className="w-full h-full max-w-6xl flex flex-col gap-2.5 justify-center items-center">
+            {/* Top Carousel Bar (max 4 tiles with < and > paging arrows) */}
+            {totalCount > 1 && (
+              <div className="w-full flex items-center justify-center gap-2 max-h-28 shrink-0 relative px-8">
+                {/* Left Arrow if more than 4 participants */}
+                {totalCount > STRIP_PAGE_SIZE && (
+                  <button
+                    type="button"
+                    disabled={speakerStripPage === 0}
+                    onClick={() =>
+                      setSpeakerStripPage((p) => Math.max(0, p - 1))
+                    }
+                    className={cn(
+                      "p-1.5 rounded-full bg-black/70 text-white border border-white/15 transition-all cursor-pointer",
+                      speakerStripPage === 0
+                        ? "opacity-30 cursor-not-allowed"
+                        : "hover:bg-black/90 opacity-80 hover:opacity-100 shadow-md"
+                    )}
+                    title="Previous participants"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                )}
+
+                {/* Top strip 4 thumbnails */}
+                <div className="flex items-center gap-2 overflow-x-hidden justify-center max-w-full">
+                  {visibleStripParticipants.map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => setSpotlightParticipantId(p.id)}
+                      className="w-36 sm:w-44 h-22 sm:h-26 shrink-0 cursor-pointer transition-transform hover:scale-[1.02]"
+                    >
+                      {renderParticipantTile(p, true)}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Right Arrow if more than 4 participants */}
+                {totalCount > STRIP_PAGE_SIZE && (
+                  <button
+                    type="button"
+                    disabled={speakerStripPage >= totalStripPages - 1}
+                    onClick={() =>
+                      setSpeakerStripPage((p) =>
+                        Math.min(totalStripPages - 1, p + 1)
+                      )
+                    }
+                    className={cn(
+                      "p-1.5 rounded-full bg-black/70 text-white border border-white/15 transition-all cursor-pointer",
+                      speakerStripPage >= totalStripPages - 1
+                        ? "opacity-30 cursor-not-allowed"
+                        : "hover:bg-black/90 opacity-80 hover:opacity-100 shadow-md"
+                    )}
+                    title="Next participants"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Main Center Spotlight Speaker */}
+            <div className="flex-1 w-full max-h-[72vh] flex items-center justify-center">
+              <div className="w-full h-full max-w-5xl max-h-[70vh] flex items-center justify-center">
+                {renderParticipantTile(currentSpeaker, false)}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </main>
   );
 };
