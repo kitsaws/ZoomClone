@@ -76,6 +76,12 @@ export function useMeetings() {
     }
   };
 
+  // Delete/cancel meeting
+  const deleteMeeting = async (meetingId: string): Promise<void> => {
+    await api.deleteMeeting(meetingId);
+    await fetchMeetings();
+  };
+
   return {
     meetings,
     activeMeetings,
@@ -86,7 +92,9 @@ export function useMeetings() {
     refreshMeetings: fetchMeetings,
     createInstantMeeting,
     scheduleMeeting,
+    deleteMeeting,
     findMeeting,
   };
 }
+
 

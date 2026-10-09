@@ -20,8 +20,9 @@ class MeetingStatus(str, enum.Enum):
 class Meeting(TimeStampedModel):
     __tablename__ = "meetings"
 
-    meeting_number: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
+    meeting_number: Mapped[str] = mapped_column(String(20), index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
+
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     host_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     passcode: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

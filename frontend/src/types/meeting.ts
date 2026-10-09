@@ -36,10 +36,12 @@ export interface Meeting {
   title?: string;
   description?: string | null;
   host_id: string;
+  host?: User | null;
   passcode?: string | null;
   status: MeetingStatus | string;
   waiting_room_enabled: boolean;
   scheduled_start_time?: string | null;
+  scheduled_end_time?: string | null;
   start_time?: string | null;
   actual_start_time?: string | null;
   duration_minutes?: number;
@@ -57,6 +59,7 @@ export interface Meeting {
   invitees?: string | string[];
   participants?: MeetingParticipant[];
 }
+
 
 
 export interface JoinRequest {

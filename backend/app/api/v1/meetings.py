@@ -152,6 +152,17 @@ def end_meeting(
     return _with_count(db, meeting)
 
 
+@router.delete("/{meeting_id}", summary="Delete a meeting by ID")
+def delete_meeting(
+    meeting_id: str,
+    x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
+    db: Session = Depends(get_db)
+):
+    """Deletes a meeting from the system."""
+    success = meeting_service.delete_meeting(db, meeting_id, user_id=x_user_id)
+    return {"success": success, "message": "Meeting deleted successfully"}
+
+
 @router.post("/{id_or_number}/token", response_model=LiveKitTokenResponse, summary="Generate scoped LiveKit access token")
 def get_livekit_token(
     id_or_number: str,

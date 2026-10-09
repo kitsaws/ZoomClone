@@ -29,17 +29,18 @@ class MeetingRepository:
 
     @staticmethod
     def get_upcoming(db: Session, limit: int = 20) -> List[Meeting]:
-        query = select(Meeting).where(
+        query = select(Meeting).options(joinedload(Meeting.host)).where(
             Meeting.status.in_([MeetingStatus.SCHEDULED, MeetingStatus.ACTIVE])
         ).order_by(Meeting.start_time.asc()).limit(limit)
         return list(db.scalars(query).all())
 
     @staticmethod
     def get_recent(db: Session, limit: int = 20) -> List[Meeting]:
-        query = select(Meeting).where(
+        query = select(Meeting).options(joinedload(Meeting.host)).where(
             Meeting.status == MeetingStatus.ENDED
         ).order_by(Meeting.updated_at.desc()).limit(limit)
         return list(db.scalars(query).all())
+
 
     @staticmethod
     def create(db: Session, meeting_data: dict) -> Meeting:
@@ -68,5 +69,16 @@ class MeetingRepository:
         )
         return count or 0
 
+    @staticmethod
+    def delete(db: Session, meeting_id: str) -> bool:
+        meeting = db.scalar(select(Meeting).where(Meeting.id == meeting_id))
+        if meeting:
+            db.delete(meeting)
+            db.commit()
+            return True
+        return False
+
 
 meeting_repo = MeetingRepository()
+
+

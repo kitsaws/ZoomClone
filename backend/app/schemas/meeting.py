@@ -82,6 +82,8 @@ class MeetingResponse(MeetingBase):
     allow_join_anytime: Optional[bool] = True
     mute_participants_on_entry: Optional[bool] = False
     invitees: Optional[str] = None
+    host: Optional[UserResponse] = None
+
 
     @computed_field
     @property

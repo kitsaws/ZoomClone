@@ -41,8 +41,14 @@ def migrate_schema():
                     if col not in meeting_cols:
                         conn.exec_driver_sql(f"ALTER TABLE meetings ADD COLUMN {col} {col_type};")
                         conn.commit()
+
+            # 3. Ensure meeting_number index is non-unique (so PMIs can be reused across scheduled calls)
+            conn.exec_driver_sql("DROP INDEX IF EXISTS ix_meetings_meeting_number;")
+            conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_meetings_meeting_number ON meetings (meeting_number);")
+            conn.commit()
         except Exception as e:
             print(f"[WARN] Schema migration note: {e}")
+
 
 
 def seed_database(db: Session = None):
@@ -80,7 +86,7 @@ def seed_database(db: Session = None):
             print("[INFO] Database already seeded. Skipping full seed execution.")
             return
 
-        print("[INFO] Seeding database with realistic Zoom Clone test data...")
+        print("[INFO] Seeding database with Zoom Clone user personas...")
 
         # 1. Seed Users (Personas)
         users = [
@@ -119,189 +125,9 @@ def seed_database(db: Session = None):
         ]
         db.add_all(users)
         db.commit()
-        for u in users:
-            db.refresh(u)
 
-        u_swastik, u_alex, u_sarah, u_david = users
-
-        now = datetime.utcnow()
-
-        # 2. Seed Meetings
-        # Meeting 1: Active Meeting with in-room participants & pending join request
-        m1_id = str(uuid.uuid4())
-        m1 = Meeting(
-            id=m1_id,
-            meeting_number="849 2018 3921",
-            title="Sprint 24 Architecture Review & WebRTC Planning",
-            description="Live sync for reviewing system architecture, API boundaries, and real-time signaling design.",
-            host_id=u_swastik.id,
-            passcode="849201",
-            status=MeetingStatus.ACTIVE,
-            start_time=now - timedelta(minutes=15),
-            duration_minutes=45,
-            invite_link="/meeting/84920183921",
-        )
-
-        # Meeting 2: Upcoming Scheduled Meeting 1
-        m2_id = str(uuid.uuid4())
-        m2 = Meeting(
-            id=m2_id,
-            meeting_number="392 4810 5928",
-            title="Scaler AI — Weekly Fullstack Sync",
-            description="Discussing frontend design tokens, Zoom UI alignment, and testing strategies.",
-            host_id=u_swastik.id,
-            passcode="392481",
-            status=MeetingStatus.SCHEDULED,
-            start_time=now + timedelta(hours=14),
-            duration_minutes=60,
-            invite_link="/meeting/39248105928",
-        )
-
-        # Meeting 3: Upcoming Scheduled Meeting 2
-        m3_id = str(uuid.uuid4())
-        m3 = Meeting(
-            id=m3_id,
-            meeting_number="718 2940 1823",
-            title="Product Design & UX Teardown",
-            description="Reviewing Zoom dark mode color palette, video grid responsiveness, and toolbar interactions.",
-            host_id=u_alex.id,
-            passcode="718294",
-            status=MeetingStatus.SCHEDULED,
-            start_time=now + timedelta(hours=28),
-            duration_minutes=30,
-            invite_link="/meeting/71829401823",
-        )
-
-        # Meeting 4: Past Meeting 1
-        m4_id = str(uuid.uuid4())
-        m4 = Meeting(
-            id=m4_id,
-            meeting_number="102 9384 5721",
-            title="Backend Scaffolding & SQLite Benchmarks",
-            description="Initial kick-off call for SQLAlchemy 2.0 ORM modeling and database seed design.",
-            host_id=u_swastik.id,
-            passcode="102938",
-            status=MeetingStatus.ENDED,
-            start_time=now - timedelta(days=1, hours=3),
-            duration_minutes=45,
-            invite_link="/meeting/10293845721",
-        )
-
-        # Meeting 5: Past Meeting 2
-        m5_id = str(uuid.uuid4())
-        m5 = Meeting(
-            id=m5_id,
-            meeting_number="592 1048 3729",
-            title="Project Kickoff & Problem Statement Review",
-            description="Deep-dive into the 24-hour engineering mission constraints and evaluation rubrics.",
-            host_id=u_sarah.id,
-            passcode="592104",
-            status=MeetingStatus.ENDED,
-            start_time=now - timedelta(days=2, hours=5),
-            duration_minutes=30,
-            invite_link="/meeting/59210483729",
-        )
-
-        db.add_all([m1, m2, m3, m4, m5])
-        db.commit()
-
-        # 3. Seed Participants
-        # Active Meeting (M1) Participants
-        m1_participants = [
-            MeetingParticipant(
-                id=str(uuid.uuid4()),
-                meeting_id=m1.id,
-                user_id=u_swastik.id,
-                display_name="Swastik Nagpal (Host)",
-                role=ParticipantRole.HOST,
-                status=ParticipantStatus.IN_MEETING,
-                is_guest=False,
-                is_audio_muted=False,
-                is_video_off=False,
-                joined_at=now - timedelta(minutes=15),
-            ),
-            MeetingParticipant(
-                id=str(uuid.uuid4()),
-                meeting_id=m1.id,
-                user_id=u_alex.id,
-                display_name="Alex Chen",
-                role=ParticipantRole.PARTICIPANT,
-                status=ParticipantStatus.IN_MEETING,
-                is_guest=False,
-                is_audio_muted=True,
-                is_video_off=False,
-                joined_at=now - timedelta(minutes=12),
-            ),
-            MeetingParticipant(
-                id=str(uuid.uuid4()),
-                meeting_id=m1.id,
-                user_id=u_sarah.id,
-                display_name="Sarah Jenkins",
-                role=ParticipantRole.PARTICIPANT,
-                status=ParticipantStatus.IN_MEETING,
-                is_guest=False,
-                is_audio_muted=False,
-                is_video_off=False,
-                joined_at=now - timedelta(minutes=10),
-            ),
-        ]
-
-        # Past Meeting (M4) Participants
-        m4_participants = [
-            MeetingParticipant(
-                id=str(uuid.uuid4()),
-                meeting_id=m4.id,
-                user_id=u_swastik.id,
-                display_name="Swastik Nagpal",
-                role=ParticipantRole.HOST,
-                status=ParticipantStatus.LEFT,
-                is_guest=False,
-                joined_at=now - timedelta(days=1, hours=3),
-                left_at=now - timedelta(days=1, hours=2, minutes=15),
-            ),
-            MeetingParticipant(
-                id=str(uuid.uuid4()),
-                meeting_id=m4.id,
-                user_id=u_sarah.id,
-                display_name="Sarah Jenkins",
-                role=ParticipantRole.PARTICIPANT,
-                status=ParticipantStatus.LEFT,
-                is_guest=False,
-                joined_at=now - timedelta(days=1, hours=3),
-                left_at=now - timedelta(days=1, hours=2, minutes=15),
-            ),
-            MeetingParticipant(
-                id=str(uuid.uuid4()),
-                meeting_id=m4.id,
-                user_id=u_david.id,
-                display_name="David Miller",
-                role=ParticipantRole.PARTICIPANT,
-                status=ParticipantStatus.LEFT,
-                is_guest=False,
-                joined_at=now - timedelta(days=1, hours=3),
-                left_at=now - timedelta(days=1, hours=2, minutes=20),
-            ),
-        ]
-
-        db.add_all(m1_participants + m4_participants)
-
-        # 4. Seed Join Request for M1 (David Miller in waiting room)
-        jr1 = JoinRequest(
-            id=str(uuid.uuid4()),
-            meeting_id=m1.id,
-            user_id=u_david.id,
-            display_name="David Miller",
-            status=JoinRequestStatus.PENDING,
-            requested_at=now - timedelta(minutes=2),
-        )
-        db.add(jr1)
-
-        db.commit()
         print("[SUCCESS] Seed data successfully populated:")
-        print(f" - {len(users)} Users created (Default: {u_swastik.display_name})")
-        print(" - 5 Meetings created (1 ACTIVE, 2 SCHEDULED, 2 ENDED)")
-        print(f" - {len(m1_participants)} In-Meeting Participants for active room {m1.meeting_number}")
-        print(f" - 1 Pending Join Request (Waiting Room: {jr1.display_name})")
+        print(f" - {len(users)} Users created (Default: Swastik Nagpal)")
 
     except Exception as e:
         db.rollback()
@@ -314,3 +140,4 @@ def seed_database(db: Session = None):
 
 if __name__ == "__main__":
     seed_database()
+

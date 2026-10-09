@@ -10,8 +10,9 @@ import { MeetingTabs } from "@/components/dashboard/MeetingTabs";
 import { ConnectingOverlay } from "@/components/modals/ConnectingOverlay";
 import { JoinMeetingModal } from "@/components/modals/JoinMeetingModal";
 import { ScheduleMeetingModal } from "@/components/modals/ScheduleMeetingModal";
+import { CopyInvitationModal } from "@/components/modals/CopyInvitationModal";
 import { UserSwitcherModal } from "@/components/modals/UserSwitcherModal";
-import { MeetingCreatePayload } from "@/types/meeting";
+import { Meeting, MeetingCreatePayload } from "@/types/meeting";
 import { useRouter } from "next/navigation";
 import { Sparkles, Sun, Moon, Laptop } from "lucide-react";
 import Link from "next/link";
@@ -26,14 +27,17 @@ export default function HomePage() {
     recentMeetings,
     createInstantMeeting,
     scheduleMeeting,
+    deleteMeeting,
   } = useMeetings();
 
   // Modals & Overlays state
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
+  const [scheduledMeetingForInvite, setScheduledMeetingForInvite] = useState<Meeting | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingTitle, setConnectingTitle] = useState("Starting meeting...");
+
 
   // Theme State
   const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
@@ -74,7 +78,10 @@ export default function HomePage() {
   };
 
   const handleScheduleSubmit = async (payload: MeetingCreatePayload) => {
-    return await scheduleMeeting(payload);
+    const meeting = await scheduleMeeting(payload);
+    setIsScheduleModalOpen(false);
+    setScheduledMeetingForInvite(meeting);
+    return meeting;
   };
 
   return (
@@ -160,8 +167,10 @@ export default function HomePage() {
             activeMeetings={activeMeetings}
             recentMeetings={recentMeetings}
             currentUserId={currentUser?.id}
+            currentUserName={currentUser?.display_name || "Host"}
             onOpenSchedule={() => setIsScheduleModalOpen(true)}
             onOpenNewMeeting={handleInstantMeeting}
+            onDeleteMeeting={deleteMeeting}
           />
         </div>
 
@@ -211,7 +220,15 @@ export default function HomePage() {
         defaultTopic={currentUser ? `${currentUser.display_name}'s Sync` : "Team Sync"}
       />
 
-      {/* 4. Multi-Persona Fast Switcher Modal */}
+      {/* 4. Copy Invitation Modal (Triggered on Schedule Save) */}
+      <CopyInvitationModal
+        isOpen={!!scheduledMeetingForInvite}
+        onClose={() => setScheduledMeetingForInvite(null)}
+        meeting={scheduledMeetingForInvite}
+        hostName={currentUser?.display_name || "Host"}
+      />
+
+      {/* 5. Multi-Persona Fast Switcher Modal */}
       <UserSwitcherModal
         isOpen={isUserSwitcherOpen}
         onClose={() => setIsUserSwitcherOpen(false)}
@@ -222,3 +239,4 @@ export default function HomePage() {
     </div>
   );
 }
+

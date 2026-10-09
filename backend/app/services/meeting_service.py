@@ -191,5 +191,13 @@ class MeetingService:
 
         return meeting
 
+    def delete_meeting(self, db: Session, meeting_id: str, user_id: Optional[str] = None) -> bool:
+        """Deletes a meeting by ID."""
+        meeting = meeting_repo.get_by_id(db, meeting_id)
+        if not meeting:
+            raise NotFoundException(f"Meeting '{meeting_id}' not found.")
+        return meeting_repo.delete(db, meeting_id)
+
 
 meeting_service = MeetingService()
+

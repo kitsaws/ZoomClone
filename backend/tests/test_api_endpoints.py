@@ -41,6 +41,19 @@ def test_users_api():
 
 
 def test_meetings_upcoming_and_recent():
+    # Create an upcoming scheduled meeting
+    start = (datetime.utcnow() + timedelta(days=1)).isoformat()
+    client.post("/api/v1/meetings/schedule", json={
+        "title": "Test Upcoming Meeting",
+        "start_time": start,
+        "duration_minutes": 30
+    })
+
+    # Create and end a meeting for recent
+    inst_res = client.post("/api/v1/meetings/instant", json={"title": "Test Ended Meeting"})
+    m_id = inst_res.json()["id"]
+    client.post(f"/api/v1/meetings/{m_id}/end")
+
     # Fetch all meetings
     all_res = client.get("/api/v1/meetings")
     assert all_res.status_code == 200
@@ -61,6 +74,7 @@ def test_meetings_upcoming_and_recent():
     assert len(rec_data) >= 1
     for m in rec_data:
         assert m["status"] == "ENDED"
+
 
 
 def test_flexible_meeting_creation():
@@ -113,17 +127,23 @@ def test_schedule_meeting():
 
 
 def test_meeting_lookup_by_number_and_id():
-    # Lookup seeded active meeting by 10-digit number
-    res = client.get("/api/v1/meetings/849 2018 3921")
+    # Create an active meeting
+    inst_res = client.post("/api/v1/meetings/instant", json={"title": "Lookup Test Meeting"})
+    created = inst_res.json()
+    m_num = created["meeting_number"]
+
+    # Lookup by formatted 10-digit number
+    res = client.get(f"/api/v1/meetings/{m_num}")
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "ACTIVE"
-    assert len(data["participants"]) >= 1
 
     # Lookup without spaces
-    res_clean = client.get("/api/v1/meetings/84920183921")
+    clean_num = m_num.replace(" ", "")
+    res_clean = client.get(f"/api/v1/meetings/{clean_num}")
     assert res_clean.status_code == 200
     assert res_clean.json()["id"] == data["id"]
+
 
 
 def test_guest_join_flow():

@@ -164,6 +164,11 @@ export const api = {
       method: "POST",
     }),
 
+  deleteMeeting: (meetingId: string) =>
+    request<{ success: boolean; message: string }>(`/meetings/${meetingId}`, {
+      method: "DELETE",
+    }),
+
   getLiveKitToken: (
     idOrNumber: string,
     payload: LiveKitTokenPayload

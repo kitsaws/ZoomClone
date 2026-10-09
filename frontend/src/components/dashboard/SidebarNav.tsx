@@ -15,6 +15,7 @@ import {
   Sparkles,
   Video,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,17 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   onSelectNav,
   className,
 }) => {
+  const router = useRouter();
+
+  const handleNavClick = (id: string) => {
+    if (onSelectNav) {
+      onSelectNav(id);
+    } else {
+      if (id === "home") router.push("/");
+      else if (id === "chat") router.push("/chat");
+    }
+  };
+
   const navItems = [
     { id: "home", label: "Home", icon: <Home className="h-5 w-5" /> },
     { id: "chat", label: "Chat", icon: <MessageSquare className="h-5 w-5" />, badge: "2" },
@@ -72,7 +84,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             return (
               <button
                 key={item.id}
-                onClick={() => onSelectNav?.(item.id)}
+                onClick={() => handleNavClick(item.id)}
                 className={cn(
                   "w-full flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all relative cursor-pointer group",
                   isActive
@@ -81,6 +93,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                 )}
                 title={item.label}
               >
+
                 {/* Left Active Accent Bar */}
                 {isActive && (
                   <span className="absolute -left-1.5 top-1.5 bottom-1.5 w-1 bg-zoom-blue rounded-r-full" />
